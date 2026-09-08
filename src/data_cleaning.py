@@ -499,7 +499,7 @@ def main():
 
     merged["price_per_m2_calculated"] = (
         merged["price"] /
-        merged["area"]
+        merged["area"].replace(0, pd.NA)
     )
 
     # --------------------------------------------------------
@@ -721,7 +721,7 @@ def main():
     print("Output saved to:")
     print(OUTPUT_PATH)
     print("=" * 60)
-
+    print("the columns of the merged dataset:", merged.columns.tolist())
 
 if __name__ == "__main__":
     main()
