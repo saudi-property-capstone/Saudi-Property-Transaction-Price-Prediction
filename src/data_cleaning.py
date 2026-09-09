@@ -14,6 +14,7 @@ Steps:
 """
 
 import pandas as pd
+import numpy as np
 from pathlib import Path
 import zipfile
 import re
@@ -33,6 +34,49 @@ ZIP_PATH = RAW_DIR / "MOJ Dataset.zip"
 REGION_MAP_PATH = RAW_DIR / "region_mapping.csv"
 
 OUTPUT_PATH = PROCESSED_DIR / "moj_sales_2020_2025_merged.csv.gz"
+
+
+# ============================================================
+# PROPERTY FIELD HARMONIZATION
+# ============================================================
+#
+# The source files carry two different Arabic columns:
+#   - "تصنيف العقار" -- present in ALL 24 quarters. Its values are broad
+#     USE categories (Residential/Commercial/Agricultural/...).
+#   - "نوع العقار"    -- present ONLY in 2023 Q1-Q3. Its values are
+#     physical property FORMS (Villa/Land/Apartment/...).
+#
+# The loader functions below originally named these "property_classification"
+# and "property_type" respectively, by literally translating the Arabic
+# header text. That naming is semantically backwards from how this project
+# wants to use the two English terms, so after the merge we rename the raw
+# columns and rebuild "property_type" / "property_classification" from the
+# canonical maps below.
+
+# "تصنيف العقار" values -> broad USE category -> final "property_type"
+USE_CATEGORY_MAP = {
+    "سكني": "Residential",
+    "تجاري": "Commercial",
+    "زراعي": "Agricultural",
+    "صناعي": "Industrial",
+    "سكني تجاري": "Mixed Use",
+    "أخرى": "Other",
+}
+
+# "نوع العقار" values -> physical FORM -> final "property_classification"
+PHYSICAL_FORM_MAP = {
+    "قطعة أرض": "Land",
+    "شقة": "Apartment",
+    "أرض زراعية": "Agricultural Land",
+    "بيت": "House",
+    "معرض/محل": "Showroom/Shop",
+    "فيلا": "Villa",
+    "مرفق": "Facility",
+    "عمارة": "Building",
+    "مركز تجاري": "Commercial Center",
+    "إستراحة": "Resthouse",
+    "قصر": "Palace",
+}
 
 
 # ============================================================
@@ -442,6 +486,62 @@ def main():
     )
     print()
 
+    n_rows_before_harmonization = len(merged)
+
+    # --------------------------------------------------------
+    # Step 4b: Harmonize property_type / property_classification
+    # --------------------------------------------------------
+    # Rename the raw-extracted columns to neutral names (nothing is lost,
+    # just relabeled), then rebuild the canonical English columns from them.
+
+    merged = merged.rename(
+        columns={
+            "property_classification": "use_category_raw",
+            "property_type": "physical_form_raw",
+        }
+    )
+
+    merged["property_type"] = (
+        merged["use_category_raw"]
+        .astype("string")
+        .str.strip()
+        .map(USE_CATEGORY_MAP)
+    )
+
+    merged["property_classification"] = (
+        merged["physical_form_raw"]
+        .astype("string")
+        .str.strip()
+        .map(PHYSICAL_FORM_MAP)
+    )
+
+    unmapped_use_category = merged.loc[
+        merged["use_category_raw"].notna() & merged["property_type"].isna(),
+        "use_category_raw",
+    ].unique()
+
+    unmapped_physical_form = merged.loc[
+        merged["physical_form_raw"].notna()
+        & merged["property_classification"].isna(),
+        "physical_form_raw",
+    ].unique()
+
+    if len(unmapped_use_category) > 0:
+        print(
+            "WARNING: unmapped use_category_raw values (became NaN): "
+            f"{list(unmapped_use_category)}"
+        )
+
+    if len(unmapped_physical_form) > 0:
+        print(
+            "WARNING: unmapped physical_form_raw values (became NaN): "
+            f"{list(unmapped_physical_form)}"
+        )
+
+    assert len(merged) == n_rows_before_harmonization, (
+        "Row count changed during property field harmonization."
+    )
+
     # --------------------------------------------------------
     # Step 5: Clean numeric fields
     # --------------------------------------------------------
@@ -496,11 +596,19 @@ def main():
     # --------------------------------------------------------
     # Step 8: Calculate price per m2
     # --------------------------------------------------------
+    # For EDA / market analysis only -- NEVER use as an ML input feature
+    # when predicting price, since it is derived directly from price and
+    # area <= 0 is treated as NaN (never inf) via a safe divisor.
 
-    merged["price_per_m2_calculated"] = (
-        merged["price"] /
-        merged["area"].replace(0, pd.NA)
-    )
+    safe_area = merged["area"].where(merged["area"] > 0)
+
+    merged["price_per_m2_calculated"] = merged["price"] / safe_area
+
+    # price_per_m2_reported (source: "سعر المتر المربع") is only present in
+    # 2023 Q1 (96.9% missing overall) -- not usable across 2020-2025, so it
+    # is dropped from the final cleaned dataset. price_per_m2_calculated
+    # above is the field to use instead.
+    merged = merged.drop(columns=["price_per_m2_reported"])
 
     # --------------------------------------------------------
     # Step 9: Missing values
@@ -524,7 +632,7 @@ def main():
         "city_district",
         "reference_number",
         "date_gregorian_raw",
-        "property_classification",
+        "use_category_raw",
         "n_properties",
         "price_raw",
         "area_raw",
@@ -664,11 +772,50 @@ def main():
     )
 
     print()
+    print("=== Property field harmonization checks ===")
 
     print(
-        "Rows with property_type populated: "
-        f"{merged['property_type'].notna().sum():,}"
+        "price_per_m2_reported dropped from final dataset: "
+        f"{'price_per_m2_reported' not in merged.columns}"
     )
+
+    print(
+        "price_per_m2_calculated has zero infinite values: "
+        f"{not np.isinf(merged['price_per_m2_calculated']).any()}"
+    )
+
+    physical_form_values = set(PHYSICAL_FORM_MAP.values())
+    use_category_values = set(USE_CATEGORY_MAP.values())
+
+    print(
+        "property_type contains no physical-form values: "
+        f"{merged['property_type'].dropna().isin(physical_form_values).sum() == 0}"
+    )
+
+    print(
+        "property_classification contains no use-category values: "
+        f"{merged['property_classification'].dropna().isin(use_category_values).sum() == 0}"
+    )
+
+    print()
+    print("Missing-value % (property_type):", round(merged["property_type"].isna().mean() * 100, 2))
+    print("Missing-value % (property_classification):", round(merged["property_classification"].isna().mean() * 100, 2))
+
+    print()
+    print("property_type value counts:")
+    print(merged["property_type"].value_counts(dropna=False).to_string())
+
+    print()
+    print("property_classification value counts:")
+    print(merged["property_classification"].value_counts(dropna=False).to_string())
+
+    print()
+    print("property_type coverage by year (non-null rows):")
+    print(merged.groupby("year")["property_type"].apply(lambda s: s.notna().sum()).to_string())
+
+    print()
+    print("property_classification coverage by year (non-null rows):")
+    print(merged.groupby("year")["property_classification"].apply(lambda s: s.notna().sum()).to_string())
 
     print()
     print("=== Full-row duplicate check ===")

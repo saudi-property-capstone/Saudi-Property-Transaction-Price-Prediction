@@ -1,0 +1,7 @@
+property_type,transaction_count,median_price,pct_of_total
+Residential,1201675,340000.0,85.4
+Commercial,149767,520000.0,10.64
+Agricultural,55601,350000.0,3.95
+Industrial,74,3300000.0,0.01
+Mixed Use,2,545000.0,0.0
+Other,1,50000.0,0.0
