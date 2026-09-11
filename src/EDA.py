@@ -4,14 +4,19 @@ MOJ Sales, 2020 Q1 - 2025 Q4 (cleaned/processed dataset)
 
 Reads the merged dataset produced by data_cleaning.py and produces
 summary tables (outputs/tables/) and figures (outputs/figures/).
-Never reads from data/raw and never writes back to data/processed.
+Never reads from data/raw and never writes back to data/processed --
+all cleaning/row-filtering already happened in data_cleaning.py.
 """
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import sys
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+sys.path.append(str(Path(__file__).resolve().parent))
+from data_io import PROCESSED_PATH, load_clean_data  # noqa: E402
 
 # ============================================================
 # PATHS
@@ -19,61 +24,16 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-PROCESSED_PATH = (
-    PROJECT_ROOT / "data" / "processed" / "moj_sales_2020_2025_merged.csv.gz"
-)
-
 TABLES_DIR = PROJECT_ROOT / "outputs" / "tables"
 FIGURES_DIR = PROJECT_ROOT / "outputs" / "figures"
 
 EXPECTED_YEARS = list(range(2020, 2026))
 EXPECTED_QUARTERS = [1, 2, 3, 4]
 
-# data_cleaning.py already harmonizes the two property fields:
-#   property_type           -> broad USE category (Residential/Commercial/
-#                               Agricultural/Industrial/...), ~100% coverage,
-#                               all years 2020-2025.
-#   property_classification -> physical FORM (Villa/Land/Apartment/...),
-#                               only populated for 2023 Q1-Q3 (~9.3% of rows).
-
-
-# ============================================================
-# 0. LOAD DATA
-# ============================================================
-
-def load_clean_data() -> pd.DataFrame:
-    """Load the processed MOJ dataset and drop empty footer rows."""
-
-    if not PROCESSED_PATH.exists():
-        raise FileNotFoundError(
-            f"Processed dataset not found:\n{PROCESSED_PATH}\n"
-            "Run src/data_cleaning.py first."
-        )
-
-    print(f"Loading cleaned dataset from: {PROCESSED_PATH}")
-
-    df = pd.read_csv(
-        PROCESSED_PATH,
-        compression="gzip",
-        parse_dates=["transaction_date"],
-        low_memory=False,
-    )
-
-    n_before = len(df)
-
-    # A handful of trailing blank rows exist in the source quarterly files
-    # (every field is NaN). They carry no information, so drop them here
-    # rather than in data_cleaning.py, since they don't affect the merge.
-    df = df.dropna(
-        subset=["price", "area", "transaction_date", "region_en"]
-    ).copy()
-
-    n_dropped = n_before - len(df)
-    print(f"Dropped {n_dropped} empty rows. Usable rows: {len(df):,}")
-
-    df["region"] = df["region_en"]
-
-    return df
+# data_cleaning.py harmonizes property_type (broad USE category) and
+# guarantees it is populated for every row in the processed dataset. Only
+# Residential / Commercial / Agricultural are retained -- Industrial /
+# Mixed Use / Other were excluded upstream for insufficient sample size.
 
 
 # ============================================================
@@ -106,7 +66,7 @@ def dataset_overview(df: pd.DataFrame) -> None:
     print(df[numeric_cols].describe().round(2).to_string())
 
     print("\nUnique counts (location / categorical):")
-    for col in ["region", "city", "city_district", "property_type", "property_classification"]:
+    for col in ["region", "city", "city_district", "property_type"]:
         print(f"  {col:<25s}: {df[col].nunique():,}")
 
 
@@ -184,13 +144,6 @@ def analyze_area(df: pd.DataFrame) -> None:
     n_outliers = (area > hi).sum() + (area < lo).sum()
     print(f"\nRows outside [1st, 99th] percentile: {n_outliers:,}")
 
-    n_bulk = (df["n_properties"] > 1).sum()
-    print(
-        f"Bulk transactions (n_properties > 1): {n_bulk:,} "
-        f"({n_bulk / len(df):.2%}) -- area/price for these rows "
-        "represent multiple properties combined, not a single unit."
-    )
-
 
 # ============================================================
 # 4. PRICE VS AREA
@@ -222,6 +175,43 @@ def price_vs_area(df: pd.DataFrame, sample_size: int = 40_000) -> None:
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "price_area_relationship.png", dpi=150)
     plt.close(fig)
+
+    plot_df = df[(df["area"] > 0) & (df["price"] > 0)].sample(
+        n=min(50_000, len(df)),
+        random_state=42
+    )
+
+    fig = plt.figure(figsize=(10, 7))
+    sns.scatterplot(
+        data=plot_df,
+        x="area",
+        y="price",
+        alpha=0.25,
+        s=15
+    )
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.title("Price vs Area — Log Scale")
+    plt.xlabel("Area (m², log scale)")
+    plt.ylabel("Price (SAR, log scale)")
+
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "price_area_log_scale.png", dpi=150)
+    plt.close(fig)
+
+    g = sns.relplot(
+        data=plot_df,
+        x="area",
+        y="price",
+        col="property_type",
+        col_wrap=3,
+        alpha=0.25,
+        facet_kws={"sharex": False, "sharey": False}
+    )
+
+    g.savefig(FIGURES_DIR / "price_area_by_property_type.png", dpi=150)
+    plt.close(g.figure)
 
 
 # ============================================================
@@ -404,10 +394,12 @@ def analyze_property_types(df: pd.DataFrame) -> pd.DataFrame:
     print("\n" + "=" * 60)
     print("8. PROPERTY TYPE ANALYSIS (property_type -- broad use category)")
     print("=" * 60)
+
+    categories = sorted(df["property_type"].dropna().unique())
+    coverage_pct = 100 - df["property_type"].isna().mean() * 100
     print(
-        "property_type (Residential / Commercial / Agricultural / "
-        "Industrial / Mixed Use / Other) is populated for ~100% of rows, "
-        "all years 2020-2025."
+        f"property_type ({' / '.join(categories)}) is populated for "
+        f"{coverage_pct:.1f}% of rows, all years 2020-2025."
     )
 
     property_type = (
@@ -445,48 +437,6 @@ def analyze_property_types(df: pd.DataFrame) -> pd.DataFrame:
     plt.close(fig)
 
     return property_type
-
-
-# ============================================================
-# 8b. PROPERTY CLASSIFICATION ANALYSIS (physical form)
-# ============================================================
-
-def analyze_property_classification(df: pd.DataFrame) -> pd.DataFrame:
-
-    print("\n" + "=" * 60)
-    print("8b. PROPERTY CLASSIFICATION ANALYSIS (physical form)")
-    print("=" * 60)
-
-    coverage = df["property_classification"].notna().sum()
-    coverage_pct = coverage / len(df) * 100
-
-    print(
-        f"property_classification (Villa / Land / Apartment / House / "
-        f"Building / ...) is only populated for 2023 Q1-Q3: {coverage:,} "
-        f"rows ({coverage_pct:.1f}% of the full 2020-2025 dataset). "
-        "The breakdown below is NOT representative of the whole period -- "
-        "it only describes 2023 Q1-Q3 transactions."
-    )
-
-    subset = df[df["property_classification"].notna()]
-
-    classification = (
-        subset.groupby("property_classification")["price"]
-        .agg(transaction_count="count", median_price="median")
-        .reset_index()
-    )
-
-    classification["pct_of_2023_q1_q3_subset"] = (
-        classification["transaction_count"] / len(subset) * 100
-    ).round(2)
-
-    classification = classification.sort_values(
-        "transaction_count", ascending=False
-    ).reset_index(drop=True)
-
-    print(classification.to_string(index=False))
-
-    return classification
 
 
 # ============================================================
@@ -558,18 +508,6 @@ def feature_target_relationships(df: pd.DataFrame, top_n_districts: int = 15) ->
         print(f"\nMedian price by {col}:")
         print(df.groupby(col)["price"].median().round(0).to_string())
 
-    print(
-        "\nMedian price by property_classification "
-        "(2023 Q1-Q3 subset only, not the full 2020-2025 period):"
-    )
-    print(
-        df.dropna(subset=["property_classification"])
-        .groupby("property_classification")["price"]
-        .median()
-        .round(0)
-        .to_string()
-    )
-
     top_districts = df["city_district"].value_counts().head(top_n_districts).index
     district_prices = (
         df[df["city_district"].isin(top_districts)]
@@ -594,8 +532,8 @@ def correlation_analysis(df: pd.DataFrame) -> pd.DataFrame:
     print("12. CORRELATION MATRIX")
     print("=" * 60)
 
-    # reference_number/plan_number/plot_number are identifiers, not
-    # meaningful numeric variables, so they are excluded.
+    # reference_number is an identifier, not a meaningful numeric variable,
+    # so it is excluded.
     numeric_cols = ["price", "area", "price_per_m2_calculated", "n_properties", "year", "quarter"]
     corr = df[numeric_cols].corr()
 
@@ -654,32 +592,63 @@ def run_validation_checks(
 # KEY FINDINGS
 # ============================================================
 
-def print_key_findings() -> None:
+def print_key_findings(
+    df: pd.DataFrame,
+    yearly: pd.DataFrame,
+    regional: pd.DataFrame,
+    property_type_summary: pd.DataFrame,
+) -> None:
+
+    median_price = df["price"].median()
+    mean_price = df["price"].mean()
+    area_price_corr = df["area"].corr(df["price"])
+
+    top_regions = (
+        regional.sort_values("transaction_count", ascending=False)["region"]
+        .head(3)
+        .tolist()
+    )
+
+    dominant_row = property_type_summary.sort_values(
+        "transaction_count", ascending=False
+    ).iloc[0]
+    dominant_type = dominant_row["property_type"]
+    dominant_share = dominant_row["pct_of_total"]
+
+    yearly_sorted = yearly.sort_values("year")
+    peak_row = yearly_sorted.loc[yearly_sorted["median_price"].idxmax()]
+    latest_row = yearly_sorted.iloc[-1]
+    peak_year = int(peak_row["year"])
+    latest_year = int(latest_row["year"])
+    trend_note = (
+        f"peaked in {peak_year} and are currently below that peak as of {latest_year}"
+        if latest_row["median_price"] < peak_row["median_price"]
+        else f"reached their highest point in {latest_year}"
+    )
 
     print("\n" + "=" * 60)
     print("EDA KEY FINDINGS / REFLECTION")
     print("=" * 60)
-    print("""
+    print(f"""
 1. Transaction prices are highly right-skewed. The median price
-   (350,000 SAR) is more representative of a typical transaction
-   than the mean (1.04M SAR).
+   ({median_price:,.0f} SAR) is more representative of a typical
+   transaction than the mean ({mean_price:,.0f} SAR).
 
-2. Median transaction prices generally increased from 2020 to 2024,
-   followed by a slight decline in 2025.
+2. Median transaction prices {trend_note}.
 
-3. Riyadh, Makkah, and the Eastern Province account for the majority
-   of transaction activity.
+3. {", ".join(top_regions)} account for the majority of transaction
+   activity.
 
-4. Residential transactions dominate the dataset, representing
-   approximately 85.4% of transactions.
+4. {dominant_type} transactions dominate the dataset, representing
+   approximately {dominant_share:.1f}% of transactions.
 
 5. Transaction prices vary substantially across regions and districts,
    suggesting that location is an important factor for price prediction.
 
-6. Property area has a weak linear correlation with price (r = 0.044).
-   However, this does not necessarily mean area is unimportant because
-   its relationship with price may be nonlinear and interact with
-   location and property type.
+6. Property area has a weak linear correlation with price
+   (r = {area_price_corr:.3f}). However, this does not necessarily mean
+   area is unimportant because its relationship with price may be
+   nonlinear and interact with location and property type.
 
 7. Price and area contain extreme values that should be investigated
    before final modeling decisions are made rather than automatically
@@ -700,7 +669,9 @@ def main() -> None:
     TABLES_DIR.mkdir(parents=True, exist_ok=True)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
+    print(f"Loading cleaned dataset from: {PROCESSED_PATH}")
     df = load_clean_data()
+    print(f"Usable rows: {len(df):,}")
 
     dataset_overview(df)
     analyze_price(df)
@@ -710,9 +681,8 @@ def main() -> None:
     quarterly = quarterly_summary(df)
     yearly = yearly_summary(df)
 
-    analyze_regions(df)
-    analyze_property_types(df)
-    analyze_property_classification(df)
+    regional = analyze_regions(df)
+    property_type_summary = analyze_property_types(df)
 
     price_quarter_heatmap(df)
     price_per_sqm_analysis(df)
@@ -720,7 +690,7 @@ def main() -> None:
     correlation_analysis(df)
 
     run_validation_checks(df, quarterly, yearly)
-    print_key_findings()
+    print_key_findings(df, yearly, regional, property_type_summary)
 
     print("\nEDA complete.")
     print(f"Tables saved to:  {TABLES_DIR}")
