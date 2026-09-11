@@ -3,10 +3,10 @@ Outlier Investigation for Price Prediction
 MOJ Sales, 2020-2025 (cleaned/processed dataset)
 
 Investigates whether extreme price/area transactions are invalid data,
-legitimate extreme transactions, bulk transactions, or suspicious records --
-and tests, experimentally, whether excluding them actually helps a baseline
-model generalize. Nothing is permanently removed from the cleaned dataset;
-all filtering here is in-memory and scoped to this script's experiments.
+legitimate extreme transactions, or suspicious records. Nothing is
+permanently removed from the cleaned dataset -- all inspection here is
+read-only and diagnostic. Model training is out of scope for this file;
+it belongs in the (separate, not-yet-written) model-training workflow.
 """
 
 import sys
@@ -14,17 +14,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 
 sys.path.append(str(Path(__file__).resolve().parent))
-from EDA import load_clean_data  # noqa: E402  (reuses the same load + empty-row drop as EDA.py)
+from data_io import find_suspicious_price_groups, load_clean_data  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TABLES_DIR = PROJECT_ROOT / "outputs" / "tables"
-
-FEATURE_COLS = ["area", "n_properties", "year", "quarter", "region", "property_type"]
-CATEGORICAL_COLS = ["region", "property_type"]
 
 TOP_N = 100
 
@@ -49,6 +44,7 @@ def inspect_invalid_values(df: pd.DataFrame) -> pd.Series:
         "price_per_m2_calculated missing": df["price_per_m2_calculated"].isna().sum(),
         "n_properties <= 0": (df["n_properties"] <= 0).sum(),
         "n_properties missing": df["n_properties"].isna().sum(),
+        "n_properties > 1 (bulk)": (df["n_properties"] > 1).sum(),
     }
 
     report = pd.Series(checks, name="row_count")
@@ -58,9 +54,12 @@ def inspect_invalid_values(df: pd.DataFrame) -> pd.Series:
     print(summary.to_string())
 
     print(
-        "\nNote: the dataset's 12 fully-empty footer rows (all core fields "
-        "NaN) are already dropped by load_clean_data(), so they do not "
-        "appear in these counts."
+        "\nNote: data_cleaning.py already removes rows with n_properties > 1 "
+        "(bulk transactions), invalid/non-positive price or area, and rows "
+        "missing any required transaction field -- these counts are expected "
+        "to be 0 (or, for missing/non-positive n_properties, retained "
+        "on purpose for later review, since that field is not a required "
+        "transaction column)."
     )
 
     return report
@@ -71,7 +70,7 @@ def inspect_invalid_values(df: pd.DataFrame) -> pd.Series:
 # ============================================================
 
 CONTEXT_COLS = [
-    "price", "area", "n_properties", "property_type", "property_classification",
+    "price", "area", "n_properties", "property_type",
     "region", "city", "city_district", "year", "quarter", "price_per_m2_calculated",
 ]
 
@@ -112,15 +111,7 @@ def flag_extreme_rows(df: pd.DataFrame, n: int = TOP_N) -> pd.DataFrame:
 
 def summarize_extreme_context(extreme_df: pd.DataFrame, df: pd.DataFrame) -> None:
 
-    print("\n--- Are extreme rows associated with bulk / specific segments? ---")
-
-    n_extreme = len(extreme_df)
-    bulk_share = (extreme_df["n_properties"] > 1).mean() * 100
-    baseline_bulk_share = (df["n_properties"] > 1).mean() * 100
-    print(
-        f"n_properties > 1 among extreme rows: {bulk_share:.1f}% "
-        f"(vs {baseline_bulk_share:.1f}% dataset-wide)"
-    )
+    print("\n--- Are extreme rows associated with specific segments? ---")
 
     print("\nproperty_type share among extreme rows vs dataset-wide:")
     extreme_share = extreme_df["property_type"].value_counts(normalize=True) * 100
@@ -180,7 +171,8 @@ def inspect_max_price_transaction(df: pd.DataFrame) -> None:
             "being an independently priced parcel -- it looks like a single "
             "bulk contract's total value was duplicated onto each parcel's "
             "row rather than allocated per parcel, even though each row "
-            "records n_properties = 1."
+            "records n_properties = 1. This is a SUSPICIOUS pattern flagged "
+            "for documented review, not an automatic deletion."
         )
     else:
         print("\nNo other row shares this exact price.")
@@ -214,57 +206,38 @@ def detect_suspicious_price_duplication(df: pd.DataFrame, area_ratio_threshold: 
         f"Of those, {len(suspicious):,} clusters ({n_suspicious_rows:,} rows) have "
         f"area varying by more than {area_ratio_threshold:.0f}x within the same "
         "identical total price -- consistent with a shared/duplicated contract "
-        "value rather than legitimate per-parcel pricing. The remaining clusters "
-        "(similar areas, often round prices) look like standardized subdivision "
-        "plot pricing, which is a normal market pattern."
+        "value rather than legitimate per-parcel pricing (SUSPICIOUS, documented "
+        "rule above). The remaining clusters (similar areas, often round prices) "
+        "look like standardized subdivision plot pricing, a normal market pattern "
+        "(a statistically extreme price, but not an invalid or suspicious one)."
     )
 
     return suspicious.reset_index()
 
 
-# ============================================================
-# TASK 4 -- BULK VS SINGLE-PROPERTY TRANSACTIONS
-# ============================================================
+def validate_suspicious_price_groups_removed(df: pd.DataFrame) -> None:
+    """Validation only -- reuses the exact same rule data_cleaning.py applies
+    to REMOVE suspicious high-price groups (see find_suspicious_price_groups
+    in data_io.py), and confirms none remain in the processed dataset.
+    Nothing is filtered or modified here.
+    """
 
-def bulk_vs_single_comparison(df: pd.DataFrame) -> pd.DataFrame:
+    print("\n--- Validation: suspicious high-price groups (same rule as data_cleaning.py) ---")
 
-    print("\n" + "=" * 60)
-    print("TASK 4: BULK (n_properties > 1) VS SINGLE-PROPERTY TRANSACTIONS")
-    print("=" * 60)
+    remaining = find_suspicious_price_groups(df)
 
-    df = df.copy()
-    df["bulk"] = np.where(df["n_properties"] > 1, "bulk (>1)", "single (=1)")
-
-    percentiles = [0.5, 0.95, 0.99, 0.999]
-
-    summary = df.groupby("bulk").agg(
-        transaction_count=("price", "count"),
-        median_price=("price", "median"),
-        mean_price=("price", "mean"),
-        median_area=("area", "median"),
-        mean_area=("area", "mean"),
-    ).round(1)
-
-    print(summary.to_string())
-
-    print("\nPrice percentiles by group:")
-    print(df.groupby("bulk")["price"].quantile(percentiles).unstack().round(0).to_string())
-
-    print("\nArea percentiles by group:")
-    print(df.groupby("bulk")["area"].quantile(percentiles).unstack().round(1).to_string())
-
-    p99_9 = df["price"].quantile(0.999)
-    bulk_share_of_extreme = (df.loc[df["price"] > p99_9, "n_properties"] > 1).mean() * 100
     print(
-        f"\nOf rows above the global 99.9th price percentile ({p99_9:,.0f} SAR), "
-        f"{bulk_share_of_extreme:.1f}% are bulk transactions (n_properties > 1)."
+        f"[{'PASS' if len(remaining) == 0 else 'FAIL'}] "
+        f"No suspicious high-price groups remain in the processed dataset "
+        f"({len(remaining)} found)."
     )
 
-    return summary
+    if len(remaining) > 0:
+        print(remaining.to_string(index=False))
 
 
 # ============================================================
-# TASK 5 -- GROUP-LEVEL OUTLIER DIAGNOSTICS
+# TASK 4 -- GROUP-LEVEL OUTLIER DIAGNOSTICS
 # ============================================================
 
 def robust_price_stats(group: pd.DataFrame) -> pd.Series:
@@ -290,7 +263,7 @@ def robust_price_stats(group: pd.DataFrame) -> pd.Series:
 def group_level_diagnostics(df: pd.DataFrame, min_group_size: int = 1000) -> None:
 
     print("\n" + "=" * 60)
-    print("TASK 5: PRICE DISTRIBUTION WITHIN SEGMENTS (diagnostic, not deletion)")
+    print("TASK 4: PRICE DISTRIBUTION WITHIN SEGMENTS (diagnostic, not deletion)")
     print("=" * 60)
 
     print("\nBy property_type:")
@@ -313,9 +286,10 @@ def group_level_diagnostics(df: pd.DataFrame, min_group_size: int = 1000) -> Non
 
     print(
         "\nIQR fences above are a diagnostic flag per segment only -- a "
-        "transaction beyond its own segment's fence is not automatically "
-        "removed, since it may be normal for that market (e.g. Makkah "
-        "commercial vs Northern Borders residential)."
+        "transaction beyond its own segment's fence is a STATISTICALLY "
+        "EXTREME value, not automatically an invalid or suspicious one, "
+        "since it may be normal for that market (e.g. Makkah commercial vs "
+        "Northern Borders residential). It is never automatically removed."
     )
 
 
@@ -344,139 +318,6 @@ def outlier_distribution_by_segment(df: pd.DataFrame) -> None:
 
 
 # ============================================================
-# TASK 6 & 7 -- MODEL EXPERIMENTS
-# ============================================================
-
-def prepare_temporal_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-
-    print("\n" + "=" * 60)
-    print("TASK 6: TEMPORAL TRAIN/TEST SPLIT")
-    print("=" * 60)
-
-    # Basic invalid-row cleanup (Dataset A vs B distinction from the proposal
-    # collapses into this single step -- only 1 row nationwide has area <= 0,
-    # and it falls in the training period, so there is no separate "B" model).
-    valid = df[(df["price"] > 0) & (df["area"] > 0)].copy()
-    n_dropped = len(df) - len(valid)
-    print(f"Dropped {n_dropped} additional invalid row(s) (price<=0 or area<=0).")
-
-    for col in CATEGORICAL_COLS:
-        valid[col] = valid[col].astype("category")
-
-    train = valid[valid["year"] <= 2024].copy()
-    test = valid[valid["year"] == 2025].copy()
-
-    print(f"Train (2020-2024): {len(train):,} rows")
-    print(f"Test  (2025):      {len(test):,} rows (fixed across all experiments below)")
-
-    return train, test
-
-
-def evaluate(model, X_test: pd.DataFrame, y_test_raw: pd.Series, p95_train: float, log_target: bool) -> dict:
-
-    pred = model.predict(X_test)
-    if log_target:
-        pred = np.expm1(pred)
-
-    def metrics(mask):
-        y_true = y_test_raw[mask]
-        y_pred = pred[mask.to_numpy()]
-        return {
-            "mae": mean_absolute_error(y_true, y_pred),
-            "rmse": root_mean_squared_error(y_true, y_pred),
-            "r2": r2_score(y_true, y_pred),
-            "n_rows": int(mask.sum()),
-        }
-
-    full_mask = pd.Series(True, index=y_test_raw.index)
-    normal_mask = y_test_raw <= p95_train
-    high_mask = y_test_raw > p95_train
-
-    return {
-        "full": metrics(full_mask),
-        "normal_price_(<=train_P95)": metrics(normal_mask),
-        "high_price_(>train_P95)": metrics(high_mask),
-    }
-
-
-def run_model_experiments(train: pd.DataFrame, test: pd.DataFrame) -> pd.DataFrame:
-
-    print("\n" + "=" * 60)
-    print("TASK 6 & 7: MODEL EXPERIMENTS (HistGradientBoostingRegressor)")
-    print("=" * 60)
-    print(
-        "Same fixed test set (2025) used for every experiment below -- only "
-        "the training data or target transform changes. price_per_m2_calculated "
-        "is never used as a feature (target leakage)."
-    )
-
-    X_test = test[FEATURE_COLS]
-    y_test = test["price"]
-
-    p95_train = train["price"].quantile(0.95)
-    p999_train = train["price"].quantile(0.999)
-    print(f"\nTraining-derived P95 (normal/high split): {p95_train:,.0f} SAR")
-    print(f"Training-derived P99.9 (experimental trim threshold): {p999_train:,.0f} SAR")
-
-    experiments = {}
-
-    # --- Experiment 1: full valid training data, raw price target ---
-    X_train = train[FEATURE_COLS]
-    y_train = train["price"]
-    model = HistGradientBoostingRegressor(categorical_features="from_dtype", random_state=42)
-    model.fit(X_train, y_train)
-    experiments["baseline_full_train_raw_price"] = {
-        "n_train_rows": len(train),
-        **evaluate(model, X_test, y_test, p95_train, log_target=False),
-    }
-
-    # --- Experiment 2: training data with price > P99.9 (train-derived) excluded ---
-    # Experimental only -- this filtering is never applied to the cleaned dataset,
-    # only to this in-memory training copy.
-    trimmed_train = train[train["price"] <= p999_train]
-    X_train_trim = trimmed_train[FEATURE_COLS]
-    y_train_trim = trimmed_train["price"]
-    model_trim = HistGradientBoostingRegressor(categorical_features="from_dtype", random_state=42)
-    model_trim.fit(X_train_trim, y_train_trim)
-    experiments["p999_trimmed_train_raw_price"] = {
-        "n_train_rows": len(trimmed_train),
-        **evaluate(model_trim, X_test, y_test, p95_train, log_target=False),
-    }
-
-    # --- Experiment 3: full valid training data, log1p(price) target ---
-    y_train_log = np.log1p(y_train)
-    model_log = HistGradientBoostingRegressor(categorical_features="from_dtype", random_state=42)
-    model_log.fit(X_train, y_train_log)
-    experiments["baseline_full_train_log1p_price"] = {
-        "n_train_rows": len(train),
-        **evaluate(model_log, X_test, y_test, p95_train, log_target=True),
-    }
-
-    rows = []
-    for exp_name, result in experiments.items():
-        n_train_rows = result["n_train_rows"]
-        for subset_name in ["full", "normal_price_(<=train_P95)", "high_price_(>train_P95)"]:
-            m = result[subset_name]
-            rows.append({
-                "experiment": exp_name,
-                "n_train_rows": n_train_rows,
-                "test_subset": subset_name,
-                "n_test_rows": m["n_rows"],
-                "mae": round(m["mae"], 2),
-                "rmse": round(m["rmse"], 2),
-                "r2": round(m["r2"], 4),
-            })
-
-    comparison = pd.DataFrame(rows)
-    print("\n" + comparison.to_string(index=False))
-
-    TABLES_DIR.mkdir(parents=True, exist_ok=True)
-    comparison.to_csv(TABLES_DIR / "outlier_model_comparison.csv", index=False)
-
-    return comparison
-
-
-# ============================================================
 # MAIN
 # ============================================================
 
@@ -490,14 +331,10 @@ def main() -> None:
     summarize_extreme_context(extreme_df, df)
     inspect_max_price_transaction(df)
     detect_suspicious_price_duplication(df)
-
-    bulk_vs_single_comparison(df)
+    validate_suspicious_price_groups_removed(df)
 
     group_level_diagnostics(df)
     outlier_distribution_by_segment(df)
-
-    train, test = prepare_temporal_split(df)
-    run_model_experiments(train, test)
 
     print("\nOutlier analysis complete.")
     print(f"Tables saved to: {TABLES_DIR}")
