@@ -126,3 +126,71 @@ outputs/tables/outlier_inspection.csv
 ## Notes
 
 * Exact key findings (median/mean price, dominant regions and property type, area-price correlation, etc.) are printed by `src/EDA.py` when it runs, computed live from the current processed dataset.
+
+### 4. Train / Validation / Test Split and Feature Engineering (`src/prepare_features.py`)
+
+Reads `data/processed/moj_sales_2020_2025_merged.csv.gz` and produces chronological splits and model-ready features. Feature transformations are defined in `src/feature_engineering.py` and called by `prepare_features.py`.
+
+Steps:
+
+* Validate the processed dataset's schema, required values, and source years/quarters before exporting files.
+* Split by source-file year before fitting preprocessing: 2020-2023 for training, 2024 for validation, and 2025 for testing.
+* Retain each input row in one split and assign a `row_id` to align predictors, targets, and metadata.
+* Select area, time, location, and property type as inputs. Exclude price, price-per-m² fields, transaction identifiers, and `row_id` from predictors.
+* Create a sequential quarter index and sine/cosine features for quarterly seasonality.
+* Encode city and district combinations using their frequencies in training data. Include region in the location keys to distinguish identical names in different areas; assign zero to unseen combinations.
+* Target-encode regions using mean training log-price, with five shuffled internal folds (seed 42) and no smoothing. Each training fold is encoded using the other four folds. Validation uses the full-training mapping; unseen regions receive the training log-price mean.
+* One-hot encode property type (`Residential` / `Commercial` / `Agricultural`) using the training category vocabulary.
+* Export natural-log price targets (`np.log(price)`) for training and validation, alongside original prices in SAR. Convert later log-price predictions back to SAR with `np.exp(log_prediction)`.
+* Prepare scaled numeric and region features for Ridge/MLP using training means and population standard deviations (`ddof=0`); retain 0/1 one-hot indicators. Prepare the same features without scaling for Random Forest.
+* Export transformed training and validation matrices, fitted preprocessing settings, and separate raw inputs, targets, and metadata for all three splits. Test inputs remain untransformed until final evaluation.
+* Check row preservation, matching feature columns across variants, and finite transformed values. Report transaction-reference overlaps, split counts, feature count, and output paths.
+
+The reference run contains 1,392,059 transactions and produces 10 features per variant:
+
+| Split | Source-file years | Rows |
+|---|---|---:|
+| Train | 2020-2023 | 945,033 |
+| Validation | 2024 | 247,088 |
+| Test | 2025 | 199,938 |
+
+Counts and feature dimensions are recorded in `feature_split_report.json` and may change with the processed dataset.
+
+Run from the project root after generating the processed dataset:
+
+```bash
+python src/prepare_features.py
+```
+
+#### Output
+
+Feature matrices are saved to `data/processed/`:
+
+```text
+X_train_scaled.npy
+X_validation_scaled.npy
+X_train_unscaled.npy
+X_validation_unscaled.npy
+```
+
+Inputs, targets, metadata, and preprocessing settings are also saved to `data/processed/` (`{split}` represents `train`, `validation`, or `test`):
+
+```text
+X_{split}_raw.csv.gz
+y_{split}.csv.gz
+{split}_metadata.csv.gz
+y_train_log.csv.gz
+y_validation_log.csv.gz
+preprocessor_scaled.json
+preprocessor_unscaled.json
+```
+
+Reports are saved to `outputs/tables/`:
+
+```text
+feature_split_report.json
+feature_names.json
+feature_target_issues.csv
+```
+
+**Modeling input:** Use the exported out-of-fold training matrices. Transforming raw training inputs with the saved preprocessor uses full-training regional means and does not reproduce those matrices. Model cross-validation requires refitting preprocessing within each training fold; the shuffled encoding folds are not a substitute for chronological model validation.
