@@ -1,0 +1,26 @@
+{
+  "scaled": [
+    "numeric__area",
+    "numeric__time_index",
+    "numeric__quarter_sin",
+    "numeric__quarter_cos",
+    "numeric__city_frequency",
+    "numeric__district_frequency",
+    "region_target__region",
+    "category__property_type_Agricultural",
+    "category__property_type_Commercial",
+    "category__property_type_Residential"
+  ],
+  "unscaled": [
+    "numeric__area",
+    "numeric__time_index",
+    "numeric__quarter_sin",
+    "numeric__quarter_cos",
+    "numeric__city_frequency",
+    "numeric__district_frequency",
+    "region_target__region",
+    "category__property_type_Agricultural",
+    "category__property_type_Commercial",
+    "category__property_type_Residential"
+  ]
+}
