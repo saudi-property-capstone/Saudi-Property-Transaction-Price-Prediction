@@ -1,0 +1,82 @@
+{
+  "split_basis": "source-file year/quarter",
+  "input_rows": 1392059,
+  "splits": {
+    "train": {
+      "source_rows": 945033,
+      "invalid_target_rows_preserved": 0,
+      "retained_rows": 945033
+    },
+    "validation": {
+      "source_rows": 247088,
+      "invalid_target_rows_preserved": 0,
+      "retained_rows": 247088
+    },
+    "test": {
+      "source_rows": 199938,
+      "invalid_target_rows_preserved": 0,
+      "retained_rows": 199938
+    }
+  },
+  "reference_overlap_counts": {
+    "train/validation": 0,
+    "train/test": 0,
+    "validation/test": 0
+  },
+  "feature_count": 10,
+  "feature_variants": {
+    "scaled": [
+      "MLP"
+    ],
+    "unscaled": [
+      "XGBoost"
+    ],
+    "native_categorical": [
+      "CatBoost"
+    ]
+  },
+  "target_transform": "natural log: log(price); inverse: exp(log_prediction)",
+  "region_encoding_target": "training log_price",
+  "training_region_encoding": "out-of-fold mean log_price; five shuffled folds inside 2020-2023 only",
+  "region_smoothing": "none",
+  "feature_backend": "pandas and NumPy",
+  "matrix_format": "NumPy NPY numeric arrays; allow_pickle=False",
+  "preprocessor_format": "JSON settings",
+  "target_encoding_folds": 5,
+  "target_encoding_random_state": 42,
+  "fit_years": [
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "test_transformed": false,
+  "test_log_target_exported": false,
+  "schema": "main_canonical",
+  "predictive_model_fitted": false,
+  "catboost_features": {
+    "numeric_columns": [
+      "area",
+      "time_index",
+      "quarter_sin",
+      "quarter_cos"
+    ],
+    "categorical_columns": [
+      "region",
+      "city",
+      "city_district",
+      "property_type"
+    ],
+    "categorical_encoding": "none: native CatBoost categoricals passed as strings (no one-hot, target encoding, frequency encoding, or scaling)",
+    "feature_count": 8,
+    "matrix_format": "compressed CSV (.csv.gz) with column names and row_id index",
+    "splits_exported": [
+      "train",
+      "validation"
+    ],
+    "test_transformed": false
+  },
+  "output_directory": "data/processed",
+  "preprocessor_directory": "data/processed",
+  "table_directory": "outputs/tables"
+}

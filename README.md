@@ -2,6 +2,28 @@
 
 This project will develop and evaluate predictive models using Saudi real-estate transaction data to estimate property transaction prices. It will also examine which property and transaction characteristics most influence estimated prices, with the goal of providing practical, data-driven support for real-estate pricing decisions.
 
+## Planned Modeling Approach
+
+Three models are planned for comparison, all trained on the same chronological split of the processed dataset:
+
+| Split | Source-file years |
+|---|---|
+| Train | 2020-2023 |
+| Validation | 2024 |
+| Test | 2025 |
+
+2025 is the final untouched test set and is not used for any fitting, tuning, or evaluation until model selection is complete.
+
+| Model | Feature input |
+|---|---|
+| XGBoost | Unscaled engineered features (frequency-encoded location, target-encoded region, one-hot property type) |
+| MLP / Deep Learning | The same engineered features, scaled |
+| CatBoost | Native categorical features (region, city, city_district, property_type kept as strings; no frequency, target, or one-hot encoding) |
+
+All preprocessing that learns from data (location frequencies, region target encoding, scaling) is fit on the training set only, so validation and test rows never leak into it. See "4. Train / Validation / Test Split and Feature Engineering" below for details.
+
+Every model is trained on the natural log of transaction price, `log(price)`. Predictions are converted back to SAR with `exp(prediction)` before computing MAE, RMSE, and R².
+
 ## Setup
 
 ```bash
@@ -126,3 +148,75 @@ outputs/tables/outlier_inspection.csv
 ## Notes
 
 * Exact key findings (median/mean price, dominant regions and property type, area-price correlation, etc.) are printed by `src/EDA.py` when it runs, computed live from the current processed dataset.
+
+### 4. Train / Validation / Test Split and Feature Engineering (`src/prepare_features.py`)
+
+Reads `data/processed/moj_sales_2020_2025_merged.csv.gz` and produces chronological splits and model-ready features. Feature transformations are defined in `src/feature_engineering.py` and called by `prepare_features.py`.
+
+Steps:
+
+* Validate the processed dataset's schema, required values, and source years/quarters before exporting files.
+* Split by source-file year before fitting preprocessing: 2020-2023 for training, 2024 for validation, and 2025 for testing.
+* Retain each input row in one split and assign a `row_id` to align predictors, targets, and metadata.
+* Select area, time, location, and property type as inputs. Exclude price, price-per-m² fields, transaction identifiers, and `row_id` from predictors.
+* Create a sequential quarter index and sine/cosine features for quarterly seasonality.
+* Encode city and district combinations using their frequencies in training data. Include region in the location keys to distinguish identical names in different areas; assign zero to unseen combinations.
+* Target-encode regions using mean training log-price, with five shuffled internal folds (seed 42) and no smoothing. Each training fold is encoded using the other four folds. Validation uses the full-training mapping; unseen regions receive the training log-price mean.
+* One-hot encode property type (`Residential` / `Commercial` / `Agricultural`) using the training category vocabulary.
+* Export natural-log price targets (`np.log(price)`) for training and validation, alongside original prices in SAR. Convert later log-price predictions back to SAR with `np.exp(log_prediction)`.
+* Prepare the same engineered/encoded features (area, quarter time index, quarter sine/cosine, city/district frequency, region target encoding, property-type one-hot) in two variants: unscaled for **XGBoost**, and scaled using training means and population standard deviations (`ddof=0`) for **MLP** (one-hot indicators stay 0/1 and are not scaled).
+* Separately, build a native-categorical feature set for **CatBoost**: the same `area`, `time_index`, `quarter_sin`, `quarter_cos` numeric columns, plus `region`, `city`, `city_district`, and `property_type` kept as raw strings -- no frequency encoding, no target encoding, no one-hot encoding, and no scaling. This path has no learned state, so it is built directly for training and validation without a separate fit step.
+* Export transformed training and validation matrices, fitted preprocessing settings, and separate raw inputs, targets, and metadata for all three splits. Test inputs remain untransformed for every model path (including CatBoost) until final evaluation.
+* Check row preservation, matching feature columns across variants, and finite transformed values. Report transaction-reference overlaps, split counts, feature count, and output paths.
+
+The reference run contains 1,392,059 transactions and produces 10 features per scaled/unscaled variant (XGBoost/MLP) and 8 native-categorical features (CatBoost):
+
+| Split | Source-file years | Rows |
+|---|---|---:|
+| Train | 2020-2023 | 945,033 |
+| Validation | 2024 | 247,088 |
+| Test | 2025 | 199,938 |
+
+Counts and feature dimensions are recorded in `feature_split_report.json` and may change with the processed dataset.
+
+Run from the project root after generating the processed dataset:
+
+```bash
+python src/prepare_features.py
+```
+
+#### Output
+
+Feature matrices are saved to `data/processed/`:
+
+```text
+X_train_scaled.npy / X_validation_scaled.npy           -> MLP
+X_train_unscaled.npy / X_validation_unscaled.npy       -> XGBoost
+X_train_catboost.csv.gz / X_validation_catboost.csv.gz -> CatBoost
+```
+
+The scaled/unscaled matrices are plain NumPy arrays (column order is recorded in `feature_names.json`). They preserve the split row order and align with the corresponding raw-input and target files. The CatBoost files are compressed CSV files that preserve column names, string categorical values, and the `row_id` index.
+
+Inputs, targets, metadata, and preprocessing settings are also saved to `data/processed/` (`{split}` represents `train`, `validation`, or `test`):
+
+```text
+X_{split}_raw.csv.gz
+y_{split}.csv.gz
+{split}_metadata.csv.gz
+y_train_log.csv.gz
+y_validation_log.csv.gz
+preprocessor_scaled.json
+preprocessor_unscaled.json
+```
+
+There is no separate preprocessor file for CatBoost: its feature builder (`catboost_features` in `src/feature_engineering.py`) has no learned state to save.
+
+Reports are saved to `outputs/tables/`:
+
+```text
+feature_split_report.json
+feature_names.json
+feature_target_issues.csv
+```
+
+**Modeling input:** For XGBoost and MLP, use the exported training matrices, which contain out-of-fold region target encodings. Transforming the raw training inputs again with a saved preprocessor would use full-training regional means and therefore would not reproduce these training matrices. CatBoost instead uses the exported native-categorical training file directly. Any future model cross-validation must refit learned preprocessing within each training fold; the five target-encoding folds are not a substitute for chronological model validation.
