@@ -7,7 +7,9 @@ MOJ Sales, 2020 Q1 - 2025 Q4 (cleaned/processed dataset)
  3. Learn location frequencies from training rows only.
  4. Prepare a natural-log price target separately from predictors.
  5. Target-encode regions and one-hot encode broad property classifications.
- 6. Provide scaled Ridge/MLP inputs and unscaled Random Forest inputs.
+ 6. Provide scaled MLP inputs and unscaled XGBoost inputs.
+ 7. Provide a separate native-categorical feature path for CatBoost (no
+    frequency/target/one-hot encoding, no scaling; categories stay as strings).
 
 Called by prepare_features.py after the chronological split. Transaction price
 is not a predictor, and learned preprocessing is not refitted on validation/test.
@@ -31,11 +33,17 @@ ALLOWED_PROPERTY_TYPES = frozenset({'Residential', 'Commercial', 'Agricultural'}
 RAW_FEATURES = ['area', 'year', 'quarter', 'region', 'city',
                 'city_district', 'property_type']
 # Fixed engineered-column order, also used when saving feature names.
+# Used by XGBoost (unscaled) and MLP (scaled).
 NUMERIC = ['area', 'time_index',
            'quarter_sin', 'quarter_cos', 'city_frequency', 'district_frequency']
 CATEGORICAL = ['region', 'property_type']
 TARGET_ENCODING_FOLDS = 5
 RANDOM_STATE = 42
+
+# CatBoost uses its own feature set: the same numeric/time columns, but raw
+# categorical columns kept as strings instead of frequency/target/one-hot encoded.
+CATBOOST_NUMERIC = ['area', 'time_index', 'quarter_sin', 'quarter_cos']
+CATBOOST_CATEGORICAL = ['region', 'city', 'city_district', 'property_type']
 
 
 # ============================================================
@@ -46,6 +54,23 @@ def category(series):
     """Return consistent text labels without learning from another split."""
     # Use one consistent label for missing/blank categories in every split.
     return series.astype('string').str.strip().replace('', pd.NA).fillna('Unknown').astype(str)
+
+
+def _area_and_time(X):
+    """Validate and build the area/time columns shared by every model's features."""
+    area = pd.to_numeric(X['area'], errors='coerce')
+    if not (np.isfinite(area) & area.gt(0)).all():
+        raise ValueError('Area must be finite and positive; report invalid input to the cleaning owner')
+    year = pd.to_numeric(X['year'], errors='raise')
+    quarter = pd.to_numeric(X['quarter'], errors='raise')
+    if not (np.isfinite(year) & (year % 1 == 0) & quarter.isin([1, 2, 3, 4])).all():
+        raise ValueError('Year must be an integer and quarter must be 1-4')
+    # A sequential index represents the quarter's position since 2020 Q1.
+    # Sine/cosine represent annual seasonality with Q4 adjacent to Q1.
+    time_index = (year - 2020) * 4 + quarter - 1
+    quarter_sin = np.sin(2 * np.pi * (quarter - 1) / 4)
+    quarter_cos = np.cos(2 * np.pi * (quarter - 1) / 4)
+    return area, time_index, quarter_sin, quarter_cos
 
 
 # ============================================================
@@ -110,23 +135,14 @@ class PropertyFeatures:
         if not hasattr(self, 'city_frequencies_'):
             raise ValueError('Fit training location frequencies before transforming inputs')
         out = pd.DataFrame(index=X.index)
-        # --- Area is the numeric property input specified in the proposal ---
-        area = pd.to_numeric(X['area'], errors='coerce')
-        if not (np.isfinite(area) & area.gt(0)).all():
-            raise ValueError('Area must be finite and positive; report invalid input to the cleaning owner')
+        # --- Area, quarter trend and seasonality (shared with CatBoost features) ---
         # Keep area unchanged here. Scaling, if requested, happens downstream.
         # Price is the only logarithmic transformation required by the proposal.
+        area, time_index, quarter_sin, quarter_cos = _area_and_time(X)
         out['area'] = area
-        # --- Quarter trend and seasonality ---
-        year = pd.to_numeric(X['year'], errors='raise')
-        quarter = pd.to_numeric(X['quarter'], errors='raise')
-        if not (np.isfinite(year) & (year % 1 == 0) & quarter.isin([1, 2, 3, 4])).all():
-            raise ValueError('Year must be an integer and quarter must be 1-4')
-        # A sequential index represents the quarter's position since 2020 Q1.
-        # Sine/cosine represent annual seasonality with Q4 adjacent to Q1.
-        out['time_index'] = (year - 2020) * 4 + quarter - 1
-        out['quarter_sin'] = np.sin(2 * np.pi * (quarter - 1) / 4)
-        out['quarter_cos'] = np.cos(2 * np.pi * (quarter - 1) / 4)
+        out['time_index'] = time_index
+        out['quarter_sin'] = quarter_sin
+        out['quarter_cos'] = quarter_cos
         cities, districts = self._keys(X)
         # --- Training-derived location encoding and categorical labels ---
         # Locations absent from training receive zero; validation/test rows do not
@@ -144,6 +160,30 @@ class PropertyFeatures:
     def get_feature_names_out(self, input_features=None):
         """Expose the column order used by the downstream preprocessing steps."""
         return np.asarray(NUMERIC + CATEGORICAL, dtype=object)
+
+
+# ============================================================
+# CATBOOST FEATURES (separate, native-categorical path)
+# ============================================================
+
+def catboost_features(X):
+    """Build CatBoost inputs: engineered numerics plus raw string categoricals.
+
+    Unlike PropertyFeatures, there is no learned state here: no city/district
+    frequency encoding, no region target encoding, no one-hot encoding, and no
+    scaling. CatBoost consumes region/city/city_district/property_type as
+    native categorical strings directly. Row order and index are preserved.
+    """
+    area, time_index, quarter_sin, quarter_cos = _area_and_time(X)
+    out = pd.DataFrame(index=X.index)
+    out['area'] = area
+    out['time_index'] = time_index
+    out['quarter_sin'] = quarter_sin
+    out['quarter_cos'] = quarter_cos
+    for col in CATBOOST_CATEGORICAL:
+        # Reuse the same missing-category label used by the other feature path.
+        out[col] = category(X[col])
+    return out[CATBOOST_NUMERIC + CATBOOST_CATEGORICAL]
 
 
 # ============================================================
@@ -298,5 +338,8 @@ class FeaturePreprocessor:
 
 
 def make_preprocessor(scale_numeric=True, target_cv=TARGET_ENCODING_FOLDS):
-    """Create scaled Ridge/MLP or unscaled Random Forest preprocessing."""
+    """Create scaled MLP or unscaled XGBoost preprocessing.
+
+    CatBoost does not use this preprocessor; see catboost_features() instead.
+    """
     return FeaturePreprocessor(scale_numeric, target_cv)

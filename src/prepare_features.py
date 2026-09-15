@@ -6,11 +6,14 @@ MOJ Sales, 2020 Q1 - 2025 Q4 (cleaned/processed dataset)
  2. Split by source year: 2020-2023 train, 2024 validation, 2025 test.
  3. Select predictors and export original and natural-log price targets.
  4. Fit scaled/unscaled preprocessing on training and transform validation.
- 5. Validate and save the aligned handoff files.
+ 5. Build native-categorical CatBoost features for train/validation only.
+ 6. Validate and save the aligned handoff files.
 
 Run from the project folder: python3 src/prepare_features.py
 The existing cleaned dataset is never overwritten. Test inputs are exported
 separately without fitting preprocessing or running predictions on them.
+This includes CatBoost: only train/validation CatBoost feature files are
+built here, so 2025 stays untouched until final model selection.
 """
 import json
 import sys
@@ -26,8 +29,9 @@ import numpy as np
 import pandas as pd
 
 from src.feature_engineering import (
-    ALLOWED_PROPERTY_TYPES, RANDOM_STATE, TARGET_ENCODING_FOLDS,
-    log_price_target, make_preprocessor, select_inputs,
+    ALLOWED_PROPERTY_TYPES, CATBOOST_CATEGORICAL, CATBOOST_NUMERIC, RANDOM_STATE,
+    TARGET_ENCODING_FOLDS, catboost_features, log_price_target, make_preprocessor,
+    select_inputs,
 )
 from src.data_io import REQUIRED_TRANSACTION_COLUMNS
 
@@ -214,10 +218,20 @@ def run(input_path=DEFAULT_INPUT, project_root=ROOT):
         feature_names[variant] = preprocessor.get_feature_names_out().tolist()
     if feature_names['scaled'] != feature_names['unscaled']:
         raise ValueError('Scaled and unscaled feature columns are not aligned')
-    # --- Step 5: Validate and export the handoff ---
+    # --- Step 5: Build CatBoost's separate native-categorical features ---
+    # Train/validation only: 2025 test rows stay untransformed until final
+    # model selection, matching the existing scaled/unscaled preprocessing.
+    catboost_frames = {name: catboost_features(inputs[name]) for name in ['train', 'validation']}
+    catboost_feature_names = CATBOOST_NUMERIC + CATBOOST_CATEGORICAL
+    # --- Step 6: Validate and export the handoff ---
     for matrix in matrices.values():
         if not np.isfinite(matrix).all():
             raise ValueError('Nonfinite transformed features')
+    for name, frame in catboost_frames.items():
+        if not np.isfinite(frame[CATBOOST_NUMERIC].to_numpy(dtype=float)).all():
+            raise ValueError('Nonfinite CatBoost numeric features')
+        if len(frame) != len(inputs[name]) or not frame.index.equals(inputs[name].index):
+            raise ValueError('CatBoost features are not aligned with their split rows')
     for folder in [output_path, table_path]:
         folder.mkdir(parents=True, exist_ok=True)
     # The previous verification no longer applies once these exports change.
@@ -235,14 +249,21 @@ def run(input_path=DEFAULT_INPUT, project_root=ROOT):
         write_compressed_csv(target, output_path / f'y_{name}_log.csv.gz')
     for name, matrix in matrices.items():
         write_feature_matrix(matrix, output_path / f'X_{name}.npy')
+    # Compressed CSV keeps column names and string categoricals for CatBoost,
+    # unlike the plain NumPy arrays used for the scaled/unscaled matrices above.
+    for name, frame in catboost_frames.items():
+        write_compressed_csv(frame, output_path / f'X_{name}_catboost.csv.gz')
     # Preprocessors contain learned feature transforms, not prediction models.
     for variant, preprocessor in preprocessors.items():
         preprocessor.save(output_path / f'preprocessor_{variant}.json')
     target_issues.to_csv(table_path / 'feature_target_issues.csv', index=True)
+    feature_names['catboost'] = catboost_feature_names
     (table_path / 'feature_names.json').write_text(json.dumps(feature_names, indent=2), encoding='utf-8')
     report.update({
         'feature_count': len(feature_names['scaled']),
-        'feature_variants': {'scaled': ['Ridge', 'MLP'], 'unscaled': ['Random Forest']},
+        'feature_variants': {
+            'scaled': ['MLP'], 'unscaled': ['XGBoost'], 'native_categorical': ['CatBoost'],
+        },
         'target_transform': 'natural log: log(price); inverse: exp(log_prediction)',
         'region_encoding_target': 'training log_price',
         'training_region_encoding': 'out-of-fold mean log_price; five shuffled folds inside 2020-2023 only',
@@ -255,9 +276,19 @@ def run(input_path=DEFAULT_INPUT, project_root=ROOT):
         'fit_years': [2020, 2021, 2022, 2023],
         'test_transformed': False, 'test_log_target_exported': False,
         'schema': 'main_canonical', 'predictive_model_fitted': False,
-        'output_directory': str(output_path.resolve()),
-        'preprocessor_directory': str(output_path.resolve()),
-        'table_directory': str(table_path.resolve()),
+        'catboost_features': {
+            'numeric_columns': CATBOOST_NUMERIC,
+            'categorical_columns': CATBOOST_CATEGORICAL,
+            'categorical_encoding': 'none: native CatBoost categoricals passed as strings '
+                                     '(no one-hot, target encoding, frequency encoding, or scaling)',
+            'feature_count': len(catboost_feature_names),
+            'matrix_format': 'compressed CSV (.csv.gz) with column names and row_id index',
+            'splits_exported': ['train', 'validation'],
+            'test_transformed': False,
+        },
+       'output_directory': output_path.relative_to(project_root).as_posix(),
+'preprocessor_directory': output_path.relative_to(project_root).as_posix(),
+'table_directory': table_path.relative_to(project_root).as_posix(),
     })
     (table_path / 'feature_split_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
     return report
@@ -270,6 +301,7 @@ def run(input_path=DEFAULT_INPUT, project_root=ROOT):
 if __name__ == '__main__':
     report = run()
     print(pd.DataFrame(report['splits']).T[['retained_rows']].to_string())
-    print('Feature columns per variant:', report['feature_count'])
+    print('Feature columns per variant (XGBoost/MLP):', report['feature_count'])
+    print('CatBoost feature columns:', report['catboost_features']['feature_count'])
     print('Split files and preprocessing:', report['output_directory'])
     print('Reports:', report['table_directory'])

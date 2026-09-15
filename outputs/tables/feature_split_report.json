@@ -26,11 +26,13 @@
   "feature_count": 10,
   "feature_variants": {
     "scaled": [
-      "Ridge",
       "MLP"
     ],
     "unscaled": [
-      "Random Forest"
+      "XGBoost"
+    ],
+    "native_categorical": [
+      "CatBoost"
     ]
   },
   "target_transform": "natural log: log(price); inverse: exp(log_prediction)",
@@ -52,7 +54,29 @@
   "test_log_target_exported": false,
   "schema": "main_canonical",
   "predictive_model_fitted": false,
-  "output_directory": "/Users/omaralhejaili/Capstone Project/Saudi-Property-Transaction-Price-Prediction/data/processed",
-  "preprocessor_directory": "/Users/omaralhejaili/Capstone Project/Saudi-Property-Transaction-Price-Prediction/data/processed",
-  "table_directory": "/Users/omaralhejaili/Capstone Project/Saudi-Property-Transaction-Price-Prediction/outputs/tables"
+  "catboost_features": {
+    "numeric_columns": [
+      "area",
+      "time_index",
+      "quarter_sin",
+      "quarter_cos"
+    ],
+    "categorical_columns": [
+      "region",
+      "city",
+      "city_district",
+      "property_type"
+    ],
+    "categorical_encoding": "none: native CatBoost categoricals passed as strings (no one-hot, target encoding, frequency encoding, or scaling)",
+    "feature_count": 8,
+    "matrix_format": "compressed CSV (.csv.gz) with column names and row_id index",
+    "splits_exported": [
+      "train",
+      "validation"
+    ],
+    "test_transformed": false
+  },
+  "output_directory": "data/processed",
+  "preprocessor_directory": "data/processed",
+  "table_directory": "outputs/tables"
 }

@@ -22,5 +22,15 @@
     "category__property_type_Agricultural",
     "category__property_type_Commercial",
     "category__property_type_Residential"
+  ],
+  "catboost": [
+    "area",
+    "time_index",
+    "quarter_sin",
+    "quarter_cos",
+    "region",
+    "city",
+    "city_district",
+    "property_type"
   ]
 }
