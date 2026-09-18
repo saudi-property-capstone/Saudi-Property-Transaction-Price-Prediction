@@ -24,6 +24,10 @@ All preprocessing that learns from data (location frequencies, region target enc
 
 Every model is trained on the natural log of transaction price, `log(price)`. Predictions are converted back to SAR with `exp(prediction)` before computing MAE, RMSE, and R².
 
+### Baseline
+
+Before any of the three models above, a rule-based **historical median baseline** (no machine learning) is computed to set the bar they must clear. See "5. Baseline Model: Historical Median" below. The project's success criterion is **at least a 15% reduction in 2024 validation MAE relative to this baseline** for XGBoost, CatBoost, and MLP.
+
 ## Setup
 
 ```bash
@@ -55,7 +59,10 @@ Run the scripts in this order:
 python src/data_cleaning.py
 python src/EDA.py
 python src/outlier_analysis.py
+python src/prepare_features.py
 ```
+
+Then, separately, run `baseline_model.ipynb` (see "5. Baseline Model: Historical Median" below) -- it is a standalone Jupyter notebook, not a `src/` script, and only needs the split files `prepare_features.py` already produced.
 
 `src/data_io.py` is not run directly -- it is a small shared, read-only module that `EDA.py` and `outlier_analysis.py` both import, so neither script repeats cleaning logic or depends on the other.
 
@@ -220,3 +227,31 @@ feature_target_issues.csv
 ```
 
 **Modeling input:** For XGBoost and MLP, use the exported training matrices, which contain out-of-fold region target encodings. Transforming the raw training inputs again with a saved preprocessor would use full-training regional means and therefore would not reproduce these training matrices. CatBoost instead uses the exported native-categorical training file directly. Any future model cross-validation must refit learned preprocessing within each training fold; the five target-encoding folds are not a substitute for chronological model validation.
+
+### 5. Baseline Model: Historical Median (`baseline_model.ipynb`)
+
+A rule-based baseline -- **not** Ridge Regression, Linear Regression, Random Forest, or any other trained algorithm -- that every later model (XGBoost, CatBoost, MLP) must beat. It reuses the split files from `prepare_features.py` directly (`X_{split}_raw.csv.gz` joined with `y_{split}.csv.gz` on `row_id`) instead of re-deriving the split or any preprocessing.
+
+**Rule:** predict a property's price as the training-only (2020-2023) median transaction price of properties sharing the same `city_district` (location) and `property_type`.
+
+Steps:
+
+* Compute the median `price` for every `city_district` + `property_type` combination observed in training only -- 2024 validation and 2025 test rows never contribute to this or any other baseline statistic.
+* Apply a two-level fallback for a validation combination unseen in training: first the training median for that `property_type` alone, then the overall training median price.
+* Evaluate on 2024 validation with MAE (primary metric), RMSE, and R², overall and broken down by `property_type`.
+* Print the project's 15%-improvement target, `target_MAE = baseline_MAE x 0.85`, that XGBoost, CatBoost, and MLP must each reach or beat on 2024 validation.
+
+The reference run groups by 21,642 `city_district` x `property_type` training combinations and reports:
+
+| Model | Dataset | MAE | RMSE | R² |
+|---|---|---:|---:|---:|
+| Baseline - Historical Median | Validation 2024 | 663,987.74 | 8,648,982.03 | 0.0619 |
+| Target (baseline MAE x 0.85) | Validation 2024 | 564,389.58 | -- | -- |
+
+Of the 247,088 validation rows, 240,568 matched a training `city_district` + `property_type` combination directly and 6,520 fell back to the training `property_type` median; no row needed the global-median fallback. Per-`property_type` counts and metrics are in the notebook and in `outputs/tables/baseline_median_summary.csv`.
+
+#### Output
+
+```text
+outputs/tables/baseline_median_summary.csv
+```
