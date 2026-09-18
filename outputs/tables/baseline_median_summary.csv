@@ -1,0 +1,6 @@
+Model,Dataset,MAE,RMSE,R2
+Baseline - Historical Median,Validation 2024,663987.74446428,8648982.02735726,0.06189703861141793
+Baseline - Historical Median,Validation 2024 - Residential,453296.7441726146,3577200.5370538807,0.014914893852273847
+Baseline - Historical Median,Validation 2024 - Commercial,2564186.6238153074,27011073.90911362,0.06405164448925782
+Baseline - Historical Median,Validation 2024 - Agricultural,1516259.7134519957,9555895.684363302,0.023089597918933724
+Target (baseline MAE x 0.85),Validation 2024,564389.582794638,,
