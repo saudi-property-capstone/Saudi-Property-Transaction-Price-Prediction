@@ -228,3 +228,22 @@ data/raw/*
 !data/processed/
 data/processed/*
 !data/processed/.gitkeep
+
+# --- Modeling-stage additions ---
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# --- Repository-size exclusions (files stay on disk; all are reproducible) ---
+# Trained model binaries. Only the exact model files are listed, so the small
+# *_config.json files next to them stay tracked.
+outputs/initial_models/models/catboost/*.cbm
+outputs/initial_models/models/xgboost/xgboost_initial.json
+outputs/initial_models/models/mlp/*.keras
+outputs/tuning/models/xgboost_v2/xgboost_v2.json
+# Full row-level prediction files (comparison and per-property-type tables stay tracked).
+outputs/initial_models/predictions/*.csv.gz
+outputs/tuning/predictions/*.csv.gz
+# Training logs.
+outputs/initial_models/logs/

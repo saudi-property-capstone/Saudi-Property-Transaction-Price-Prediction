@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "n_rows": 247088,
+    "mae": 663987.74446428,
+    "rmse": 8648982.02735726,
+    "r2": 0.06189703861141793
+  },
+  "per_type": [
+    {
+      "model": "Historical Median Baseline",
+      "property_type": "Residential",
+      "n_rows": 218284,
+      "mae": 453296.7441726146,
+      "rmse": 3577200.5370538807,
+      "r2": 0.014914893852273847,
+      "r2_note": ""
+    },
+    {
+      "model": "Historical Median Baseline",
+      "property_type": "Commercial",
+      "n_rows": 20461,
+      "mae": 2564186.6238153074,
+      "rmse": 27011073.90911362,
+      "r2": 0.06405164448925782,
+      "r2_note": ""
+    },
+    {
+      "model": "Historical Median Baseline",
+      "property_type": "Agricultural",
+      "n_rows": 8343,
+      "mae": 1516259.7134519957,
+      "rmse": 9555895.684363302,
+      "r2": 0.023089597918933724,
+      "r2_note": ""
+    }
+  ],
+  "fallback_usage": {
+    "group_median_rows": 240568,
+    "property_type_fallback_rows": 6520,
+    "global_fallback_rows": 0
+  },
+  "fit_seconds": 0.2521707000000788,
+  "n_groups": 21642,
+  "notebook_validation_mae": 663987.74446428
+}

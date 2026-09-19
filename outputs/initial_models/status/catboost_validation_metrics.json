@@ -1,0 +1,26 @@
+{
+  "model_key": "catboost",
+  "model": "CatBoost",
+  "version": "Initial",
+  "target_transform": "natural log: y = ln(price); inverse: price = exp(y)",
+  "validation": {
+    "n_rows": 247088,
+    "mae": 554411.080487811,
+    "rmse": 7638328.8945492925,
+    "r2": 0.26832666724382026
+  },
+  "train": {
+    "n_rows": 945033,
+    "mae": 351976.6980889933,
+    "rmse": 6954642.1648626365,
+    "r2": 0.42378208138162565
+  },
+  "training_seconds": 437.2944228000006,
+  "best_iteration": 986,
+  "validation_predictions_clipped": 0,
+  "log_clip_bounds": [
+    8.517193191416238,
+    21.785133150065583
+  ],
+  "iteration_detail": "986 trees kept (early stopping)"
+}

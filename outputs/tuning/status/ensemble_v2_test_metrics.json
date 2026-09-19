@@ -1,0 +1,41 @@
+{
+  "model": "Ensemble v2 (XGBoost v2 + CatBoost, 50/50)",
+  "test": {
+    "n_rows": 199938,
+    "mae": 545025.9698153922,
+    "rmse": 7647744.440191115,
+    "r2": 0.3624811137376529,
+    "r2_ln_price": 0.6604460648251531,
+    "median_abs_error": 128682.60277199963
+  },
+  "per_type": [
+    {
+      "model": "Ensemble v2 (XGBoost v2 + CatBoost, 50/50)",
+      "property_type": "Residential",
+      "n_rows": 181503,
+      "mae": 376356.6468256219,
+      "rmse": 4634252.730971526,
+      "r2": 0.22748571194778,
+      "r2_note": ""
+    },
+    {
+      "model": "Ensemble v2 (XGBoost v2 + CatBoost, 50/50)",
+      "property_type": "Commercial",
+      "n_rows": 12180,
+      "mae": 2699049.4748032293,
+      "rmse": 24435198.526526686,
+      "r2": 0.42262365765584864,
+      "r2_note": ""
+    },
+    {
+      "model": "Ensemble v2 (XGBoost v2 + CatBoost, 50/50)",
+      "property_type": "Agricultural",
+      "n_rows": 6255,
+      "mae": 1244943.1304645399,
+      "rmse": 9148729.637965824,
+      "r2": 0.09165729096173092,
+      "r2_note": ""
+    }
+  ],
+  "training_seconds": 506.313664700001
+}

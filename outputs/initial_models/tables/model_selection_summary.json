@@ -1,0 +1,19 @@
+{
+  "best_by_validation_mae": "XGBoost",
+  "best_by_test_mae": "CatBoost",
+  "recommended_for_tuning": [
+    "XGBoost",
+    "CatBoost"
+  ],
+  "recommendation_rule": "the two models with the lowest Validation 2024 MAE; test results were not used for this choice",
+  "validation_mae": {
+    "XGBoost": 539630.0420338047,
+    "CatBoost": 554411.080487811,
+    "MLP": 977812.5063234103
+  },
+  "test_mae": {
+    "XGBoost": 596077.3127300751,
+    "CatBoost": 554819.4782137665,
+    "MLP": 1186305.5068115175
+  }
+}

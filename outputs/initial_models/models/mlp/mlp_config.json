@@ -1,0 +1,41 @@
+{
+  "hidden_units": [
+    128,
+    64,
+    32
+  ],
+  "activation": "relu",
+  "loss": "mse",
+  "optimizer": "adam",
+  "learning_rate": 0.001,
+  "batch_size": 2048,
+  "max_epochs": 100,
+  "early_stopping_patience": 8,
+  "early_stopping_monitor": "val_loss",
+  "restore_best_weights": true,
+  "random_seed": 42,
+  "input_features": [
+    "numeric__area",
+    "numeric__time_index",
+    "numeric__quarter_sin",
+    "numeric__quarter_cos",
+    "numeric__city_frequency",
+    "numeric__district_frequency",
+    "region_target__region",
+    "category__property_type_Agricultural",
+    "category__property_type_Commercial",
+    "category__property_type_Residential"
+  ],
+  "target": "natural log: y = ln(price); inverse: price = exp(y)",
+  "epochs_completed": 13,
+  "best_epoch": 5,
+  "n_parameters": 11777,
+  "tensorflow_version": "2.21.0",
+  "keras_version": "3.12.4",
+  "architecture": [
+    "Dense(128, relu)",
+    "Dense(64, relu)",
+    "Dense(32, relu)",
+    "Dense(1, linear)"
+  ]
+}

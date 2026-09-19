@@ -1,0 +1,44 @@
+{
+  "model_key": "catboost",
+  "model": "CatBoost",
+  "version": "Initial - Untuned",
+  "test": {
+    "n_rows": 199938,
+    "mae": 554819.4782137665,
+    "rmse": 7609559.672832293,
+    "r2": 0.3688314141810136
+  },
+  "test_predictions_clipped": 0,
+  "per_type": [
+    {
+      "model": "CatBoost",
+      "property_type": "Residential",
+      "n_rows": 181503,
+      "mae": 388363.76558799925,
+      "rmse": 4602816.841929172,
+      "r2": 0.237930678498109,
+      "r2_note": ""
+    },
+    {
+      "model": "CatBoost",
+      "property_type": "Commercial",
+      "n_rows": 12180,
+      "mae": 2702117.051024373,
+      "rmse": 24344781.25543724,
+      "r2": 0.42688866960781724,
+      "r2_note": ""
+    },
+    {
+      "model": "CatBoost",
+      "property_type": "Agricultural",
+      "n_rows": 6255,
+      "mae": 1203600.736708,
+      "rmse": 9060417.04957721,
+      "r2": 0.10910909612639785,
+      "r2_note": ""
+    }
+  ],
+  "training_seconds": 437.2944228000006,
+  "best_iteration": 986,
+  "iteration_detail": "986 trees kept (early stopping)"
+}
