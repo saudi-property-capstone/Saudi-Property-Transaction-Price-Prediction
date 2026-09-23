@@ -4,15 +4,15 @@ Initial Modeling comparison tables, built ONLY from already-saved results.
 Run: python -m src.modeling.initial_tables
 
 Reads the per-model status JSON files written when the initial models were
-trained / evaluated. It loads no model, makes no prediction, and never touches
-Test 2025 data: it only re-arranges saved numbers into tables.
+trained / evaluated, plus the saved per-row prediction files. It loads no
+model and makes no new prediction: it only re-arranges saved numbers into
+tables.
 
 Two extra columns (R² on ln(price) and median absolute error) were not stored
-in the initial status files. They exist in the saved comparison tables for
-Initial XGBoost and Initial CatBoost (computed earlier from their saved
-predictions); those saved values are reused when they exactly match the saved
-MAE. For the baseline and Initial MLP they were never computed, so they are
-left EMPTY rather than invented.
+in the status files, so they are computed here from each model's saved
+predictions (actual_price, predicted_price). A provenance guard checks that the
+MAE recomputed from those predictions matches the saved MAE, so the extra
+columns always describe the same predictions as the rest of the row.
 """
 import numpy as np
 import pandas as pd
@@ -20,41 +20,31 @@ import pandas as pd
 from src.modeling import config as cfg
 from src.modeling.evaluation import improvement_pct, load_json
 
-# Saved extra metrics live in the tuning stage's earlier comparison tables.
-SUPPLEMENT = {
-    'validation': (cfg.TUNING_TABLES_DIR / 'v2_validation_comparison.csv',
-                   {'xgboost': 'XGBoost v1', 'catboost': 'CatBoost v1'},
-                   'Validation R2 (ln price)', 'Median abs error (SAR)', 'Validation MAE (SAR)'),
-    'test': (cfg.TUNING_TABLES_DIR / 'v2_test_comparison.csv',
-             {'xgboost': 'XGBoost v1', 'catboost': 'CatBoost v1'},
-             'Test R2 (ln price)', 'Median abs error (SAR)', 'Test MAE (SAR)'),
-}
-
 
 def display_name(label):
     """Map a label stored in an older result file to the current display name."""
     return cfg.LEGACY_LABELS.get(label, label)
 
 
-def saved_extras(split, key, saved_mae):
-    """(R² on ln price, median abs error) if saved AND consistent with the saved MAE."""
-    path, names, r2_col, med_col, mae_col = SUPPLEMENT[split]
-    if key not in names or not path.exists():
-        return np.nan, np.nan
-    table = pd.read_csv(path)
-    row = table[table['Model'] == names[key]]
-    if row.empty:
-        return np.nan, np.nan
-    row = row.iloc[0]
-    if abs(row[mae_col] - saved_mae) > 0.01:          # provenance guard
-        raise ValueError(f'Saved extra metrics for {key}/{split} do not match its saved MAE')
-    return float(row[r2_col]), float(row[med_col])
+def prediction_extras(key, split, saved_mae):
+    """(R² on ln price, median abs error in SAR) from the saved predictions file."""
+    frame = pd.read_csv(cfg.predictions_path(key, split))
+    actual = frame['actual_price'].to_numpy(dtype=np.float64)
+    pred = frame['predicted_price'].to_numpy(dtype=np.float64)
+    if not ((actual > 0).all() and (pred > 0).all()):
+        raise ValueError(f'{key}/{split}: ln(price) needs positive actual and predicted prices')
+    error = np.abs(actual - pred)
+    if not np.isclose(error.mean(), saved_mae, rtol=1e-6):   # provenance guard
+        raise ValueError(f'{key}/{split}: predictions file MAE does not match the saved MAE')
+    log_actual, log_pred = np.log(actual), np.log(pred)
+    r2_ln = 1.0 - np.sum((log_actual - log_pred) ** 2) / np.sum((log_actual - log_actual.mean()) ** 2)
+    return float(r2_ln), float(np.median(error))
 
 
 def _model_row(split, key, result, base_mae):
     m = result[split]
     imp = improvement_pct(base_mae, m['mae'])
-    r2_ln, med = saved_extras(split, key, m['mae'])
+    r2_ln, med = prediction_extras(key, split, m['mae'])
     return {
         f'{split.title()} MAE (SAR)': m['mae'], f'{split.title()} RMSE (SAR)': m['rmse'],
         f'{split.title()} R2 (SAR)': m['r2'], f'{split.title()} R2 (ln price)': r2_ln,
@@ -72,10 +62,11 @@ def build_comparison(split):
     label = 'Validation' if split == 'validation' else 'Test'
     base = load_json(cfg.STATUS_DIR / f'baseline_{split}_metrics.json')
     base_mae = base['metrics']['mae']
+    base_r2_ln, base_med = prediction_extras('baseline', split, base_mae)
     rows = [{'Model': cfg.MODEL_LABELS['baseline'], 'Version': 'Baseline',
              f'{label} MAE (SAR)': base_mae, f'{label} RMSE (SAR)': base['metrics']['rmse'],
-             f'{label} R2 (SAR)': base['metrics']['r2'], f'{label} R2 (ln price)': np.nan,
-             'Median abs error (SAR)': np.nan, 'Training time (s)': base['fit_seconds'],
+             f'{label} R2 (SAR)': base['metrics']['r2'], f'{label} R2 (ln price)': base_r2_ln,
+             'Median abs error (SAR)': base_med, 'Training time (s)': base['fit_seconds'],
              'Best iteration / epochs': np.nan, 'Iteration detail': 'not applicable (rule-based)',
              'MAE improvement vs baseline (%)': 0.0, 'Met 15% target': 'n/a (reference)'}]
     version = 'Initial' if split == 'validation' else 'Initial — Untuned'

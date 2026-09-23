@@ -234,7 +234,7 @@ feature_target_issues.csv
 
 ### 5. Baseline Model: Historical Median (`notebooks/baseline_model.ipynb`)
 
-A rule-based baseline -- **not** Ridge Regression, Linear Regression, Random Forest, or any other trained algorithm -- that every later model (XGBoost, CatBoost, MLP) must beat. It reuses the split files from `prepare_features.py` directly (`X_{split}_raw.csv.gz` joined with `y_{split}.csv.gz` on `row_id`) instead of re-deriving the split or any preprocessing.
+A rule-based baseline that every later model (XGBoost, CatBoost, MLP) must beat. It reuses the split files from `prepare_features.py` directly (`X_{split}_raw.csv.gz` joined with `y_{split}.csv.gz` on `row_id`) instead of re-deriving the split or any preprocessing.
 
 **Rule:** predict a property's price as the training-only (2020-2023) median transaction price of properties sharing the same `city_district` (location) and `property_type`.
 
@@ -262,7 +262,7 @@ outputs/initial_models/tables/baseline_median_summary.csv
 
 ## 6. ML and DL Models — Initial Models
 
-This section covers **only** these four entries:
+This section covers these four entries:
 
 - `Historical Median Baseline`
 - `Initial XGBoost`

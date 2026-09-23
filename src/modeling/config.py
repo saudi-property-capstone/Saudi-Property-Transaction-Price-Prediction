@@ -8,7 +8,7 @@ Two stages, two output folders (both under outputs/, never anywhere else):
 
     outputs/initial_models/   Initial Modeling: baseline + Initial XGBoost /
                               CatBoost / MLP  (code: src/modeling/)
-    outputs/tuning/           Hyperparameter Tuning - Work in Progress
+    outputs/tuning/           Hyperparameter Tuning
                               (code: src/tuning/)
 
 Initial Modeling code writes only to outputs/initial_models/. Tuning code may

@@ -6,7 +6,6 @@ median price of properties sharing the same city_district and property_type,
 falling back to the training property_type median and then the overall
 training median. This module reimplements that rule so it can also be applied
 to 2025, and checks that it reproduces the notebook's saved validation MAE.
-Ridge or any other trained model is NOT the baseline.
 """
 import time
 

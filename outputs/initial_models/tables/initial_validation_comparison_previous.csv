@@ -1,5 +1,0 @@
-Model,Rank (Validation MAE),Version,Validation MAE (SAR),Validation RMSE (SAR),Validation R2,Training time (s),Best iteration / epochs,Iteration detail,MAE improvement vs baseline (%),Met 15% target
-Historical Median Baseline,,Baseline,663987.74446428,8648982.02735726,0.06189703861141793,0.2521707000000788,,not applicable (rule-based),0.0,n/a (reference)
-XGBoost,1,Initial,539630.0420338047,8261631.7249630755,0.14404254045101572,43.92138339999974,1229.0,1229 trees kept (early stopping),18.728915325208273,Yes
-CatBoost,2,Initial,554411.080487811,7638328.8945492925,0.26832666724382026,437.2944228000006,986.0,986 trees kept (early stopping),16.502814229632783,Yes
-MLP,3,Initial,977812.5063234103,24512976.019021735,-6.535509095123488,34.080953699999554,13.0,"13 epochs completed (best epoch 5, weights restored)",-47.26363769143527,No
