@@ -1,0 +1,44 @@
+{
+  "model_key": "xgboost",
+  "model": "XGBoost",
+  "version": "Initial - Untuned",
+  "test": {
+    "n_rows": 199938,
+    "mae": 596077.3127300751,
+    "rmse": 12670755.74778322,
+    "r2": -0.7499730460246374
+  },
+  "test_predictions_clipped": 7,
+  "per_type": [
+    {
+      "model": "XGBoost",
+      "property_type": "Residential",
+      "n_rows": 181503,
+      "mae": 381752.40640401293,
+      "rmse": 4612771.175634588,
+      "r2": 0.23463091861130414,
+      "r2_note": ""
+    },
+    {
+      "model": "XGBoost",
+      "property_type": "Commercial",
+      "n_rows": 12180,
+      "mae": 3363115.8200109373,
+      "rmse": 47703108.03569564,
+      "r2": -1.2004960482907583,
+      "r2_note": ""
+    },
+    {
+      "model": "XGBoost",
+      "property_type": "Agricultural",
+      "n_rows": 6255,
+      "mae": 1427106.0024532352,
+      "rmse": 9126990.668884676,
+      "r2": 0.09596892205599328,
+      "r2_note": ""
+    }
+  ],
+  "training_seconds": 43.92138339999974,
+  "best_iteration": 1229,
+  "iteration_detail": "1229 trees kept (early stopping)"
+}

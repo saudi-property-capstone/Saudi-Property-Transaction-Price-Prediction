@@ -1,0 +1,42 @@
+{
+  "model": "XGBoost v2 (min_child_weight=200)",
+  "test": {
+    "n_rows": 199938,
+    "mae": 561275.7740143411,
+    "rmse": 8655181.951445132,
+    "r2": 0.18345762907109564,
+    "r2_ln_price": 0.6488079754185532,
+    "median_abs_error": 130178.52435736635
+  },
+  "per_type": [
+    {
+      "model": "XGBoost v2 (min_child_weight=200)",
+      "property_type": "Residential",
+      "n_rows": 181503,
+      "mae": 378533.63505252777,
+      "rmse": 4732294.490657434,
+      "r2": 0.1944534954672109,
+      "r2_note": ""
+    },
+    {
+      "model": "XGBoost v2 (min_child_weight=200)",
+      "property_type": "Commercial",
+      "n_rows": 12180,
+      "mae": 2876027.0288005457,
+      "rmse": 29184538.833037883,
+      "r2": 0.17636856932825795,
+      "r2_note": ""
+    },
+    {
+      "model": "XGBoost v2 (min_child_weight=200)",
+      "property_type": "Agricultural",
+      "n_rows": 6255,
+      "mae": 1356571.723605074,
+      "rmse": 9282327.766329216,
+      "r2": 0.0649346871330333,
+      "r2_note": ""
+    }
+  ],
+  "training_seconds": 69.01924190000045,
+  "best_iteration": 1406
+}

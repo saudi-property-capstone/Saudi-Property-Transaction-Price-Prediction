@@ -1,0 +1,7 @@
+{
+  "frozen_at_utc": "2026-09-19T07:23:57+00:00",
+  "ensemble": "exp(mean(ln(XGBoost v2), ln(CatBoost v1))), weights 0.5/0.5, not tuned",
+  "xgboost_v2_model_sha256": "c59ce605eb57d5327e17c56520fe3361538206be1e046898459c422c5ef64c7f",
+  "xgboost_v2_config_sha256": "4bb37d7d1b46397d0ee8b46c89bc684ce1ed0b0fea6249f0089d99e4f7ff2bea",
+  "catboost_v1_model_sha256": "74b0e9dd2b6906900154b2945e818f3104d3fb96653f4e2603c4f6b3b7e86c1c"
+}

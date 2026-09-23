@@ -1,0 +1,27 @@
+{
+  "frozen_at_utc": "2026-09-19T06:47:32+00:00",
+  "note": "Initial untuned configurations. Not to be changed after this point.",
+  "models": {
+    "xgboost": {
+      "model_file": "outputs/initial_models/models/xgboost/xgboost_initial.json",
+      "model_sha256": "295db6751287f3f62bd9fc51a2581032aee4f07262a4c0124fc3f99eab200ab3",
+      "config_file": "outputs/initial_models/models/xgboost/xgboost_config.json",
+      "config_sha256": "8af12fa0cb0dc5326b0b44fa6700423f162189aabe0fe0d7d2c1a810e6cbbc25",
+      "validation_mae": 539630.0420338047
+    },
+    "catboost": {
+      "model_file": "outputs/initial_models/models/catboost/catboost_initial.cbm",
+      "model_sha256": "74b0e9dd2b6906900154b2945e818f3104d3fb96653f4e2603c4f6b3b7e86c1c",
+      "config_file": "outputs/initial_models/models/catboost/catboost_config.json",
+      "config_sha256": "694a0bcbdf84f149fc9f9cf544d3fff665d7ca11202a956ab511fbac6912a880",
+      "validation_mae": 554411.080487811
+    },
+    "mlp": {
+      "model_file": "outputs/initial_models/models/mlp/mlp_initial.keras",
+      "model_sha256": "370c26b45fcf5718a3f44a43d143d1356092574fd12c2e8c88959b6e0de9cd3a",
+      "config_file": "outputs/initial_models/models/mlp/mlp_config.json",
+      "config_sha256": "4b8319270fe19dcb814ef3997017dd375ae46aa4b4c3dd6ec8f522cfe29970c3",
+      "validation_mae": 977812.5063234103
+    }
+  }
+}

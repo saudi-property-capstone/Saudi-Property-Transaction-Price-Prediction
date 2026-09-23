@@ -1,0 +1,44 @@
+{
+  "model_key": "mlp",
+  "model": "MLP",
+  "version": "Initial - Untuned",
+  "test": {
+    "n_rows": 199938,
+    "mae": 1186305.5068115175,
+    "rmse": 29871336.061658856,
+    "r2": -8.726030268699297
+  },
+  "test_predictions_clipped": 18,
+  "per_type": [
+    {
+      "model": "MLP",
+      "property_type": "Residential",
+      "n_rows": 181503,
+      "mae": 608050.8994870505,
+      "rmse": 10611073.165906688,
+      "r2": -3.0500996588307725,
+      "r2_note": ""
+    },
+    {
+      "model": "MLP",
+      "property_type": "Commercial",
+      "n_rows": 12180,
+      "mae": 7705819.984580893,
+      "rmse": 101442396.19744302,
+      "r2": -8.950988852558046,
+      "r2_note": ""
+    },
+    {
+      "model": "MLP",
+      "property_type": "Agricultural",
+      "n_rows": 6255,
+      "mae": 5270599.616161128,
+      "rmse": 72224775.86783671,
+      "r2": -55.61096435296382,
+      "r2_note": ""
+    }
+  ],
+  "training_seconds": 34.080953699999554,
+  "best_iteration": 13,
+  "iteration_detail": "13 epochs completed (best epoch 5, weights restored)"
+}

@@ -1,0 +1,33 @@
+{
+  "loss_function": "RMSE",
+  "eval_metric": "RMSE",
+  "iterations": 3000,
+  "learning_rate": 0.1,
+  "depth": 8,
+  "l2_leaf_reg": 3.0,
+  "early_stopping_rounds": 50,
+  "use_best_model": true,
+  "thread_count": -1,
+  "random_seed": 42,
+  "allow_writing_files": false,
+  "feature_names": [
+    "area",
+    "time_index",
+    "quarter_sin",
+    "quarter_cos",
+    "region",
+    "city",
+    "city_district",
+    "property_type"
+  ],
+  "categorical_features": [
+    "region",
+    "city",
+    "city_district",
+    "property_type"
+  ],
+  "target": "natural log: y = ln(price); inverse: price = exp(y)",
+  "best_iteration_0based": 985,
+  "trees_kept": 986,
+  "catboost_version": "1.2.10"
+}

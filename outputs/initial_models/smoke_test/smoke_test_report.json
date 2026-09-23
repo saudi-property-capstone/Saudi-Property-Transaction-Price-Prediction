@@ -1,0 +1,35 @@
+{
+  "diagnostic_only": true,
+  "note": "Tiny models on samples; NOT final results.",
+  "random_state": 42,
+  "checks": [],
+  "package_versions": {
+    "numpy": "2.2.6",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.7.2",
+    "xgboost": "3.2.0",
+    "catboost": "1.2.10",
+    "tensorflow": "2.21.0",
+    "keras": "3.12.4",
+    "matplotlib": "3.10.9"
+  },
+  "xgboost_diagnostic_metrics": {
+    "n_rows": 5000,
+    "mae": 690830.5241281597,
+    "rmse": 6224184.474943737,
+    "r2": 0.02772938139662462
+  },
+  "catboost_diagnostic_metrics": {
+    "n_rows": 5000,
+    "mae": 631205.5080967222,
+    "rmse": 6216600.638211043,
+    "r2": 0.03009725771121441
+  },
+  "mlp_diagnostic_metrics": {
+    "n_rows": 5000,
+    "mae": 767943.087322727,
+    "rmse": 6313356.746617455,
+    "r2": -0.00032911887935349604
+  },
+  "status": "passed"
+}

@@ -1,0 +1,5 @@
+{
+  "preprocessor_scaled.json": "d916112b0d86bfbc361dda37cabafe92812c08e4daccfbaf446bae5c77b1c862",
+  "preprocessor_unscaled.json": "22f74bd529990458b9ab1b0b880b568706d0185e14a3583ee5873109c7fc9462",
+  "_note": "Copies of the training-fitted (2020-2023) preprocessors written by src/prepare_features.py. preprocessor_scaled.json -> MLP (region target encoding + scaling); preprocessor_unscaled.json -> XGBoost. CatBoost has no learned preprocessing (native categoricals). Load with src.feature_engineering.FeaturePreprocessor.load()."
+}

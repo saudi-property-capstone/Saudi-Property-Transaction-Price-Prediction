@@ -1,0 +1,28 @@
+{
+  "model_key": "mlp",
+  "model": "MLP",
+  "version": "Initial",
+  "target_transform": "natural log: y = ln(price); inverse: price = exp(y)",
+  "validation": {
+    "n_rows": 247088,
+    "mae": 977812.5063234103,
+    "rmse": 24512976.019021735,
+    "r2": -6.535509095123488
+  },
+  "train": {
+    "n_rows": 945033,
+    "mae": 566867.495558351,
+    "rmse": 13604193.802663667,
+    "r2": -1.2048690496154402
+  },
+  "training_seconds": 34.080953699999554,
+  "best_iteration": 13,
+  "validation_predictions_clipped": 18,
+  "log_clip_bounds": [
+    8.517193191416238,
+    21.785133150065583
+  ],
+  "epochs_completed": 13,
+  "best_epoch": 5,
+  "iteration_detail": "13 epochs completed (best epoch 5, weights restored)"
+}

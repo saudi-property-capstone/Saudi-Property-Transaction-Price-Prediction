@@ -1,0 +1,27 @@
+{
+  "model_key": "xgboost_v2",
+  "model": "XGBoost v2 (min_child_weight=200)",
+  "version": "Initial",
+  "target_transform": "natural log: y = ln(price); inverse: price = exp(y)",
+  "validation": {
+    "n_rows": 247088,
+    "mae": 523324.50820484257,
+    "rmse": 7198782.9276531525,
+    "r2": 0.3501117668553436
+  },
+  "train": {
+    "n_rows": 945033,
+    "mae": 354029.64257053507,
+    "rmse": 7777544.980182228,
+    "r2": 0.2793535629916887
+  },
+  "training_seconds": 69.01924190000045,
+  "best_iteration": 1406,
+  "validation_r2_ln_price": 0.7090483153055229,
+  "validation_predictions_clipped": 0,
+  "log_clip_bounds": [
+    8.517193191416238,
+    21.785133150065583
+  ],
+  "iteration_detail": "1406 trees kept (early stopping)"
+}
