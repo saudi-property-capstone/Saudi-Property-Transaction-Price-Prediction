@@ -1,0 +1,30 @@
+{
+  "loss_function": "RMSE",
+  "eval_metric": "RMSE",
+  "iterations": 3000,
+  "learning_rate": 0.1552,
+  "depth": 9,
+  "l2_leaf_reg": 8.02,
+  "early_stopping_rounds": 50,
+  "use_best_model": true,
+  "thread_count": -1,
+  "random_seed": 42,
+  "allow_writing_files": false,
+  "random_strength": 1.485,
+  "bagging_temperature": 0.2506,
+  "one_hot_max_size": 16,
+  "max_ctr_complexity": 2,
+  "target": "natural log: y = ln(price); inverse: price = exp(y)",
+  "selected_trial": 2,
+  "trial_source": "random search",
+  "searched_overrides": {
+    "learning_rate": 0.1552,
+    "depth": 9,
+    "l2_leaf_reg": 8.02,
+    "random_strength": 1.485,
+    "bagging_temperature": 0.2506,
+    "one_hot_max_size": 16,
+    "max_ctr_complexity": 2
+  },
+  "iterations_used": 851
+}

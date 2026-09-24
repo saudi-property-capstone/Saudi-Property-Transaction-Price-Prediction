@@ -30,7 +30,7 @@ Every model is trained on the natural log of transaction price, `ln(price)`. Pre
 
 ### Baseline
 
-A rule-based **historical median baseline** (no machine learning) sets the bar the three models must clear. See "5. Baseline Model: Historical Median" below. The project's success criterion is **at least a 15% reduction in MAE relative to this baseline**. Results for the three models are in "6. ML and DL Models — Initial Models".
+A rule-based **historical median baseline** (no machine learning) sets the bar the three models must clear. See "5. Baseline Model: Historical Median" below. The project's success criterion is **at least a 15% reduction in MAE relative to this baseline**. Results are in "6. ML and DL Models — Initial Models" and "7. Hyperparameter Tuning and Stacking".
 
 ## Setup
 
@@ -262,120 +262,45 @@ outputs/initial_models/tables/baseline_median_summary.csv
 
 ## 6. ML and DL Models — Initial Models
 
-This section covers these four entries:
+Initial (untuned) XGBoost, CatBoost and MLP models, trained on `ln(price)` and compared with the historical-median baseline on Validation 2024 and Test 2025.
 
-- `Historical Median Baseline`
-- `Initial XGBoost`
-- `Initial CatBoost`
-- `Initial MLP`
-
-XGBoost and CatBoost are the **machine-learning** models; the MLP is the **deep-learning** model. Code is in `src/modeling/` and every result is saved under `outputs/initial_models/`.
-
-**How the models were evaluated**
-
-- **MAE in SAR is the primary metric.** RMSE and R² are supporting metrics; **R² on the original SAR scale is the main R² result.**
-- The success criterion is a reduction of at least 15% in MAE relative to the historical-median baseline: `(baseline MAE - model MAE) / baseline MAE x 100`.
-- **Validation 2024** was used for early stopping and for comparing the initial models.
-- **Test 2025** was used for held-out evaluation after the initial configurations were frozen (SHA-256 hashes are recorded in `outputs/initial_models/models/frozen_configs.json`).
-- Models are trained on `ln(price)`; predictions are converted to SAR with `exp`, clipped to the training `ln(price)` range and at zero.
-
-### Initial model configurations
-
-Taken from the saved configuration files in `outputs/initial_models/models/*/`. These are initial settings; no parameter search was run.
-
-| Model | Main initial configuration | Feature input | Early stopping |
-|---|---|---|---|
-| Initial XGBoost | `hist` tree method, depth 8, learning rate 0.05, up to 3,000 trees, subsample 0.8, colsample_bytree 0.8, squared error on `ln(price)`, seed 42 | Unscaled engineered numeric matrix | 50 rounds on Validation 2024; 1,229 trees kept |
-| Initial CatBoost | Depth 8, learning rate 0.1, up to 3,000 iterations, L2 leaf regularization 3.0, RMSE loss on `ln(price)`, seed 42 | Native categorical features (region, city, city_district, property_type) plus numeric time/area features | 50 rounds on Validation 2024, best model kept; 986 trees kept |
-| Initial MLP | Hidden layers 128 → 64 → 32 (ReLU), linear output, Adam (learning rate 0.001), MSE loss on `ln(price)`, batch size 2,048, up to 100 epochs, seed 42 | Scaled engineered numeric matrix | `EarlyStopping` on `val_loss`, patience 8, `restore_best_weights=True`; 13 epochs completed (best epoch 5) |
-
-### Initial results: Validation 2024
-
-| Model | MAE (SAR) | RMSE (SAR) | R² (SAR scale) | Training time (s) | Best iteration / epochs | MAE improvement vs baseline | 15% target met |
-|---|---:|---:|---:|---:|---:|---:|---|
-| Historical Median Baseline | 663,988 | 8,648,982 | 0.0619 | 0.3 | — | — | — (reference) |
-| Initial XGBoost | 539,630 | 8,261,632 | 0.1440 | 43.9 | 1,229 | +18.73% | Yes |
-| Initial CatBoost | 554,411 | 7,638,329 | 0.2683 | 437.3 | 986 | +16.50% | Yes |
-| Initial MLP | 977,813 | 24,512,976 | -6.5355 | 34.1 | 13 | -47.26% | No |
-
-### Initial results: Test 2025
-
-| Model | MAE (SAR) | RMSE (SAR) | R² (SAR scale) | Training time (s) | MAE improvement vs test baseline | 15% target met |
-|---|---:|---:|---:|---:|---:|---|
-| Historical Median Baseline | 679,496 | 9,480,147 | 0.0204 | 0.3 | — | — (reference) |
-| Initial XGBoost | 596,077 | 12,670,756 | -0.7500 | 43.9 | +12.28% | No |
-| Initial CatBoost | 554,819 | 7,609,560 | 0.3688 | 437.3 | +18.35% | Yes |
-| Initial MLP | 1,186,306 | 29,871,336 | -8.7260 | 34.1 | -74.59% | No |
-
-Values are read from `outputs/initial_models/tables/initial_validation_comparison.csv` and `initial_test_comparison.csv`.
-
-### Interpretation
-
-- Initial XGBoost and Initial CatBoost both exceeded the 15% MAE-improvement target on Validation 2024.
-- Initial CatBoost also exceeded the 15% target on Test 2025 and was the most stable individual initial model (its MAE changed by only +0.1% from validation to test).
-- Initial XGBoost did not maintain the 15% improvement on Test 2025.
-- Initial MLP performed worse than the historical-median baseline in its initial configuration. This result is reported as it is.
-- A small number of very large commercial transactions strongly affect RMSE and SAR-scale R², which is why those metrics are low or unstable for several models.
-- No rows were removed and no data were modified during Initial Modeling.
-
-### Per-property-type evaluation (Test 2025)
-
-Results were also evaluated separately for Residential, Commercial, and Agricultural properties. Full table: `outputs/initial_models/tables/initial_per_property_type_test_metrics.csv`.
-
-| Model | Property type | Test rows | MAE (SAR) | RMSE (SAR) | R² (SAR scale) |
-|---|---|---:|---:|---:|---:|
-| Historical Median Baseline | Residential | 181,503 | 480,022 | 5,258,114 | 0.0055 |
-| Historical Median Baseline | Commercial | 12,180 | 3,231,369 | 31,822,428 | 0.0207 |
-| Historical Median Baseline | Agricultural | 6,255 | 1,498,579 | 9,928,843 | -0.0699 |
-| Initial XGBoost | Residential | 181,503 | 381,752 | 4,612,771 | 0.2346 |
-| Initial XGBoost | Commercial | 12,180 | 3,363,116 | 47,703,108 | -1.2005 |
-| Initial XGBoost | Agricultural | 6,255 | 1,427,106 | 9,126,991 | 0.0960 |
-| Initial CatBoost | Residential | 181,503 | 388,364 | 4,602,817 | 0.2379 |
-| Initial CatBoost | Commercial | 12,180 | 2,702,117 | 24,344,781 | 0.4269 |
-| Initial CatBoost | Agricultural | 6,255 | 1,203,601 | 9,060,417 | 0.1091 |
-| Initial MLP | Residential | 181,503 | 608,051 | 10,611,073 | -3.0501 |
-| Initial MLP | Commercial | 12,180 | 7,705,820 | 101,442,396 | -8.9510 |
-| Initial MLP | Agricultural | 6,255 | 5,270,600 | 72,224,776 | -55.6110 |
-
-### Initial Modeling files and commands
-
-- Code: `src/modeling/`
-- Results: `outputs/initial_models/` (`models/`, `tables/`, `predictions/`, `figures/`, `reports/`, `logs/`, `status/`, `smoke_test/`)
-- Report: `outputs/initial_models/reports/initial_models_report.md`; `notebooks/results_analysis.ipynb` displays the saved results without retraining.
-
-Run from the repository root, as modules:
+- Report: [`outputs/initial_models/reports/initial_models_report.md`](outputs/initial_models/reports/initial_models_report.md)
+- Code: `src/modeling/` · Results: `outputs/initial_models/`
 
 ```bash
 python -m src.modeling.run_all
 ```
 
-`run_all` runs the full pipeline and safely skips stages whose verified saved outputs already exist, so an interrupted run can be resumed. The individual steps can also be run on their own:
+## 7. Hyperparameter Tuning and Stacking
+
+Seeded random search for XGBoost, CatBoost and MLP, a Ridge stack of the two best tuned models, and one Test 2025 evaluation of the final (frozen) model. All selection decisions use Validation 2024 only.
+
+- Report: [`outputs/tuning/reports/tuning_work_in_progress.md`](outputs/tuning/reports/tuning_work_in_progress.md)
+- Code: `src/tuning/` · Results: `outputs/tuning/`
 
 ```bash
-python -m src.modeling.smoke_test
-python -m src.modeling.train_xgboost
-python -m src.modeling.train_catboost
-python -m src.modeling.train_mlp
-python -m src.modeling.initial_tables
+python -m src.tuning.tune_models --model all
+python -m src.tuning.stacking
+python -m src.tuning.final_comparison
+python -m src.tuning.evaluate_final_test
+python -m src.tuning.make_tuning_wip_report
 ```
 
-The three `train_*` commands accept `--force` to retrain a model. `initial_tables` rebuilds the comparison tables from already-saved results without loading any model.
+Trained model files and row-level predictions stay on disk but are not tracked in Git (size); they are reproducible with the commands above.
 
-### Trained models and full predictions are not tracked
+## 8. Model Interpretation (SHAP / Feature Importance)
 
-Trained model files (`outputs/initial_models/models/catboost/catboost_initial.cbm`, about 150 MB; `xgboost/xgboost_initial.json`, about 30 MB; `mlp/mlp_initial.keras`), the full row-level prediction files (`outputs/initial_models/predictions/*.csv.gz`) and the training logs are intentionally excluded from Git because of repository size. They are reproducible and stay on disk locally. Configuration files, status files, comparison tables, per-property-type tables, figures and reports are tracked.
+Exact SHAP values of the final stacked model (Tuned XGBoost + Tuned CatBoost), grouped into five characteristics (location, area, time trend, property type, season) to show which ones drive the predicted price.
 
-To regenerate everything (finished stages are skipped, so this only rebuilds what is missing):
+- Report: section 10 of [`outputs/tuning/reports/tuning_work_in_progress.md`](outputs/tuning/reports/tuning_work_in_progress.md)
+- Code: `src/tuning/feature_importance.py` · Figures: `outputs/tuning/figures/feature_importance_*.png`
 
 ```bash
-python -m src.modeling.run_all
+python -m src.tuning.feature_importance
+python -m src.tuning.make_tuning_wip_report
 ```
 
-or a single model, for example the CatBoost model:
-
-```bash
-python -m src.modeling.train_catboost
-```
+`notebooks/results_analysis.ipynb` displays the saved results of sections 6-8 without retraining.
 
 ## Repository Structure
 
@@ -388,6 +313,7 @@ src/
   data_cleaning.py  data_io.py  EDA.py  outlier_analysis.py
   feature_engineering.py  prepare_features.py
   modeling/                   ML and DL Initial Modeling code
+  tuning/                     hyperparameter tuning and stacking code
 
 notebooks/
   baseline_model.ipynb
@@ -397,6 +323,8 @@ outputs/
   figures/  tables/           EDA and feature-pipeline outputs
   initial_models/
     models/  tables/  predictions/  figures/  reports/  logs/  status/  smoke_test/
+  tuning/
+    models/  tables/  predictions/  reports/  logs/  status/
 ```
 
 Fitted preprocessing has one canonical location: `data/processed/preprocessor_{scaled,unscaled}.json`, written by `src/prepare_features.py` on Training 2020-2023 and loaded from there by all code. `outputs/initial_models/models/preprocessing/` holds a checksummed snapshot for reproducibility. All output paths are defined once in `src/modeling/config.py`.

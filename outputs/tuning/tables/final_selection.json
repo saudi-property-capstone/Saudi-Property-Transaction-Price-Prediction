@@ -1,0 +1,14 @@
+{
+  "selected_key": "stack_tuned",
+  "selected_model": "Stack (Ridge on top-2 tuned models)",
+  "rule": "lowest Validation 2024 MAE (SAR) among the tuned models and the two-model stack; Test 2025 not used",
+  "candidates_validation_mae": {
+    "Stack (Ridge on top-2 tuned models)": 505380.40921088075,
+    "Tuned XGBoost": 518148.75586408185,
+    "Tuned CatBoost": 537329.6286931684,
+    "Tuned MLP": 657428.2775771279
+  },
+  "best_individual_tuned_model": "Tuned XGBoost",
+  "stack_beats_best_individual": true,
+  "stack_minus_best_individual_mae_sar": -12768.346653201093
+}

@@ -1,0 +1,30 @@
+{
+  "model_key": "xgboost_tuned",
+  "model": "Tuned XGBoost",
+  "version": "Tuned",
+  "target_transform": "natural log: y = ln(price); inverse: price = exp(y)",
+  "selected_trial": 9,
+  "trial_source": "random search",
+  "validation": {
+    "n_rows": 247088,
+    "mae": 518148.75586408196,
+    "rmse": 7245252.326969047,
+    "r2": 0.3416944027028136,
+    "r2_ln_price": 0.7158252128501505,
+    "median_abs_error": 118610.77364993657
+  },
+  "train": {
+    "n_rows": 945033,
+    "mae": 335237.32959582395,
+    "rmse": 7451812.685621938,
+    "r2": 0.338452488611132
+  },
+  "training_seconds": 65.6134802000015,
+  "best_iteration": 1295,
+  "iteration_detail": "1295 trees kept (early stopping)",
+  "validation_predictions_clipped": 0,
+  "log_clip_bounds": [
+    8.517193191416238,
+    21.785133150065583
+  ]
+}

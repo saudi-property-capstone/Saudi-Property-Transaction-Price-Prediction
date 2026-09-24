@@ -1,0 +1,30 @@
+{
+  "model_key": "catboost_tuned",
+  "model": "Tuned CatBoost",
+  "version": "Tuned",
+  "target_transform": "natural log: y = ln(price); inverse: price = exp(y)",
+  "selected_trial": 2,
+  "trial_source": "random search",
+  "validation": {
+    "n_rows": 247088,
+    "mae": 537329.6286931684,
+    "rmse": 7512971.122227881,
+    "r2": 0.29214556616532616,
+    "r2_ln_price": 0.7089425123970051,
+    "median_abs_error": 123643.31495140599
+  },
+  "train": {
+    "n_rows": 945033,
+    "mae": 339217.31898044737,
+    "rmse": 6905528.111865758,
+    "r2": 0.4318919070975148
+  },
+  "training_seconds": 344.896997999982,
+  "best_iteration": 851,
+  "iteration_detail": "851 trees kept (early stopping)",
+  "validation_predictions_clipped": 0,
+  "log_clip_bounds": [
+    8.517193191416238,
+    21.785133150065583
+  ]
+}

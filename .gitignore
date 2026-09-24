@@ -242,8 +242,12 @@ outputs/initial_models/models/catboost/*.cbm
 outputs/initial_models/models/xgboost/xgboost_initial.json
 outputs/initial_models/models/mlp/*.keras
 outputs/tuning/models/xgboost_v2/xgboost_v2.json
+outputs/tuning/models/xgboost_tuned/xgboost_tuned.json
+outputs/tuning/models/catboost_tuned/*.cbm
+outputs/tuning/models/mlp_tuned/*.keras
 # Full row-level prediction files (comparison and per-property-type tables stay tracked).
 outputs/initial_models/predictions/*.csv.gz
 outputs/tuning/predictions/*.csv.gz
+outputs/tuning/predictions/stack_oof_parts/
 # Training logs.
 outputs/initial_models/logs/

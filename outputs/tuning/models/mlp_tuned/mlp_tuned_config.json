@@ -1,0 +1,39 @@
+{
+  "loss": "huber",
+  "dropout": 0.2,
+  "l2": 1e-06,
+  "area_transform": "log1p_standardized",
+  "hidden_units": [
+    256,
+    256,
+    128,
+    64
+  ],
+  "activation": "relu",
+  "optimizer": "adam",
+  "learning_rate": 0.00122,
+  "batch_size": 4096,
+  "max_epochs": 60,
+  "early_stopping_patience": 8,
+  "early_stopping_monitor": "val_loss",
+  "restore_best_weights": true,
+  "random_seed": 42,
+  "target": "natural log: y = ln(price); inverse: price = exp(y)",
+  "selected_trial": 2,
+  "trial_source": "random search",
+  "searched_overrides": {
+    "hidden_units": [
+      256,
+      256,
+      128,
+      64
+    ],
+    "learning_rate": 0.00122,
+    "batch_size": 4096,
+    "loss": "huber",
+    "dropout": 0.2,
+    "l2": 1e-06,
+    "area_transform": "log1p_standardized"
+  },
+  "iterations_used": 18
+}

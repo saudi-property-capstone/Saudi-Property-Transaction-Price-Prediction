@@ -49,7 +49,7 @@ BASELINE_SUMMARY_CSV = TABLES_DIR / 'baseline_median_summary.csv'   # written by
 PREPROCESSING_DIR = MODELS_DIR / 'preprocessing'
 FROZEN_CONFIG_JSON = MODELS_DIR / 'frozen_configs.json'
 
-# ---------- Hyperparameter Tuning outputs (work in progress) ----------
+# ---------- Hyperparameter Tuning outputs ----------
 TUNING_DIR = OUTPUTS_DIR / 'tuning'
 TUNING_MODELS_DIR = TUNING_DIR / 'models'
 TUNING_TABLES_DIR = TUNING_DIR / 'tables'
@@ -89,6 +89,20 @@ MODEL_LABELS[V2_XGB_KEY] = 'XGBoost v2 (min_child_weight=200) [tuning experiment
 MODEL_LABELS[V2_ENSEMBLE_KEY] = 'Ensemble v2 (XGBoost v2 + Initial CatBoost, 50/50) [tuning experiment]'
 MODEL_FILES[V2_XGB_KEY] = TUNING_MODELS_DIR / 'xgboost_v2' / 'xgboost_v2.json'
 
+# Hyperparameter search + stacking (src/tuning/tune_models.py, stacking.py).
+TUNED_KEYS = {'xgboost': 'xgboost_tuned', 'catboost': 'catboost_tuned', 'mlp': 'mlp_tuned'}
+STACK_KEY = 'stack_tuned'
+TUNING_KEYS |= set(TUNED_KEYS.values()) | {STACK_KEY}
+MODEL_LABELS.update({'xgboost_tuned': 'Tuned XGBoost', 'catboost_tuned': 'Tuned CatBoost',
+                     'mlp_tuned': 'Tuned MLP', STACK_KEY: 'Stack (Ridge on top-2 tuned models)'})
+MODEL_FILES.update({
+    'xgboost_tuned': TUNING_MODELS_DIR / 'xgboost_tuned' / 'xgboost_tuned.json',
+    'catboost_tuned': TUNING_MODELS_DIR / 'catboost_tuned' / 'catboost_tuned.cbm',
+    'mlp_tuned': TUNING_MODELS_DIR / 'mlp_tuned' / 'mlp_tuned.keras',
+    STACK_KEY: TUNING_MODELS_DIR / STACK_KEY / 'stack_meta_ridge.json',
+})
+FROZEN_FINAL_JSON = TUNING_MODELS_DIR / 'frozen_final_selection.json'
+
 
 # ---------- Path helpers: the model key decides the stage folder ----------
 
@@ -124,5 +138,6 @@ def make_tuning_output_dirs():
     """Create the Hyperparameter Tuning output folders (never the initial ones)."""
     for folder in [TUNING_MODELS_DIR, TUNING_TABLES_DIR, TUNING_PREDICTIONS_DIR,
                    TUNING_FIGURES_DIR, TUNING_LOGS_DIR, TUNING_STATUS_DIR,
-                   TUNING_REPORTS_DIR, MODEL_FILES[V2_XGB_KEY].parent]:
+                   TUNING_REPORTS_DIR, MODEL_FILES[V2_XGB_KEY].parent,
+                   *(MODEL_FILES[k].parent for k in [*TUNED_KEYS.values(), STACK_KEY])]:
         folder.mkdir(parents=True, exist_ok=True)
