@@ -1,0 +1,12 @@
+{
+  "frozen_at_utc": "2026-09-23T11:08:11+00:00",
+  "selected_key": "stack_tuned",
+  "selected_model": "Stack (Ridge on top-2 tuned models)",
+  "files": {
+    "outputs/tuning/models/stack_tuned/stack_meta_ridge.json": "5854cc866ee9ebe4d0a95ae1b4a27be158ba0923697f483945c3de8e02641d9f",
+    "outputs/tuning/models/xgboost_tuned/xgboost_tuned.json": "0e951201d20ee996c4f08f1515225040bdd51c3f2c48ff69358da455f397f067",
+    "outputs/tuning/models/xgboost_tuned/xgboost_tuned_config.json": "8cdd35c7d3f52f8c146ba6241e1cff0ed669d1a972475da22fa24a3f4c5c2e5a",
+    "outputs/tuning/models/catboost_tuned/catboost_tuned.cbm": "946afdb7023ff5d2fa0ce4e37c9f773e748ac844eea433779d5b2cf1fff9418e",
+    "outputs/tuning/models/catboost_tuned/catboost_tuned_config.json": "2296d35c79da92b19a6dedea06bb907b754bca4e098788ddeb9223ac39297af5"
+  }
+}

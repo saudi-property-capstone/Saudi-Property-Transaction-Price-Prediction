@@ -1,0 +1,42 @@
+{
+  "model_key": "stack_tuned",
+  "model": "Stack (Ridge on top-2 tuned models)",
+  "test": {
+    "n_rows": 199938,
+    "mae": 525307.3576475091,
+    "rmse": 7672868.776203378,
+    "r2": 0.35828548489080325,
+    "r2_ln_price": 0.6748175359908617,
+    "median_abs_error": 120634.10275810753
+  },
+  "test_predictions_clipped": 0,
+  "per_type": [
+    {
+      "model": "Stack (Ridge on top-2 tuned models)",
+      "property_type": "Residential",
+      "n_rows": 181503,
+      "mae": 358184.5513343141,
+      "rmse": 4685652.582627696,
+      "r2": 0.21025431618141954,
+      "r2_note": ""
+    },
+    {
+      "model": "Stack (Ridge on top-2 tuned models)",
+      "property_type": "Commercial",
+      "n_rows": 12180,
+      "mae": 2621132.608333029,
+      "rmse": 24426307.268111542,
+      "r2": 0.42304376214345374,
+      "r2_note": ""
+    },
+    {
+      "model": "Stack (Ridge on top-2 tuned models)",
+      "property_type": "Agricultural",
+      "n_rows": 6255,
+      "mae": 1293674.9293364305,
+      "rmse": 9107607.72642315,
+      "r2": 0.09980461697045206,
+      "r2_note": ""
+    }
+  ]
+}

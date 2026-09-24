@@ -1,0 +1,34 @@
+{
+  "model_key": "stack_tuned",
+  "model": "Stack (Ridge on top-2 tuned models)",
+  "version": "Tuned (stack)",
+  "base_models": [
+    "Tuned XGBoost",
+    "Tuned CatBoost"
+  ],
+  "validation": {
+    "n_rows": 247088,
+    "mae": 505380.40921088075,
+    "rmse": 7026041.432962793,
+    "r2": 0.3809269038972336,
+    "r2_ln_price": 0.7291216567974393,
+    "median_abs_error": 113711.80990088859
+  },
+  "meta_fit_on_oof_2021_2023": {
+    "n_rows": 671280,
+    "mae": 440804.9020885574,
+    "rmse": 8988880.316263137,
+    "r2": 0.22940710894027216,
+    "r2_ln_price": 0.6500304013278939,
+    "median_abs_error": 109666.48138716488
+  },
+  "coefficients": {
+    "xgboost": 0.5109261609420149,
+    "catboost": 0.49885291495240475
+  },
+  "intercept": -0.04420266396267891,
+  "training_seconds": 632.1407188000157,
+  "best_iteration": null,
+  "iteration_detail": "Ridge on xgboost + catboost (OOF 2021-2023)",
+  "validation_predictions_clipped": 0
+}

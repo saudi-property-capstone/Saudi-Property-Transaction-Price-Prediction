@@ -1,0 +1,3 @@
+Model,Test MAE (SAR),Test RMSE (SAR),Test R2 (SAR),Test R2 (ln price),Median abs error (SAR),MAE improvement vs test baseline (%),Met 15% target
+Historical Median Baseline,679495.9398554801,9480146.891561866,0.020382681290422977,0.482155205098145,172500.0,0.0,n/a (reference)
+Stack (Ridge on top-2 tuned models),525307.3576475091,7672868.776203378,0.35828548489080325,0.6748175359908617,120634.10275810753,22.691611997087858,Yes

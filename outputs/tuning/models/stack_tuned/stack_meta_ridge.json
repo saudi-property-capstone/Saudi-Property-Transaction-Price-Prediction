@@ -1,0 +1,44 @@
+{
+  "meta_model": "sklearn Ridge",
+  "alpha": 1.0,
+  "features": [
+    "ln(price) prediction of Tuned XGBoost",
+    "ln(price) prediction of Tuned CatBoost"
+  ],
+  "base_families": [
+    "xgboost",
+    "catboost"
+  ],
+  "coefficients": {
+    "xgboost": 0.5109261609420149,
+    "catboost": 0.49885291495240475
+  },
+  "intercept": -0.04420266396267891,
+  "target": "natural log: y = ln(price); inverse: price = exp(y)",
+  "oof_scheme": [
+    {
+      "fit_years": [
+        2020
+      ],
+      "held_out_year": 2021
+    },
+    {
+      "fit_years": [
+        2020,
+        2021
+      ],
+      "held_out_year": 2022
+    },
+    {
+      "fit_years": [
+        2020,
+        2021,
+        2022
+      ],
+      "held_out_year": 2023
+    }
+  ],
+  "oof_rows": 671280,
+  "rows_excluded_no_oof_2020": 273753,
+  "base_model_iterations_in_folds": "fixed at the tuned model's count (no early stopping)"
+}

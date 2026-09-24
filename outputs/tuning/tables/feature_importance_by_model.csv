@@ -1,0 +1,19 @@
+Model,Feature,Characteristic,Mean |SHAP| (ln price),Share of model total (%)
+Tuned XGBoost,city frequency,Location,0.6820728182792664,39.79288864135742
+Tuned XGBoost,area,Area,0.26850444078445435,15.664848327636719
+Tuned XGBoost,region (target-encoded),Location,0.25562193989753723,14.913269996643066
+Tuned XGBoost,district frequency,Location,0.22921405732631683,13.372604370117188
+Tuned XGBoost,time index (quarter since 2020),Time trend,0.1936083734035492,11.295329093933105
+Tuned XGBoost,property_type_Commercial,Property type,0.032521527260541916,1.897342324256897
+Tuned XGBoost,property_type_Residential,Property type,0.017218686640262604,1.0045573711395264
+Tuned XGBoost,quarter (cos),Season (quarter),0.014727896079421043,0.8592419624328613
+Tuned XGBoost,property_type_Agricultural,Property type,0.01114665437489748,0.6503082513809204
+Tuned XGBoost,quarter (sin),Season (quarter),0.009420516900718212,0.5496034622192383
+Tuned CatBoost,city,Location,0.5642076140902864,37.39997396509209
+Tuned CatBoost,district,Location,0.45741482831733926,30.32093549091662
+Tuned CatBoost,area,Area,0.20064718760609118,13.300422406982815
+Tuned CatBoost,time index (quarter since 2020),Time trend,0.14183856745101958,9.402139562521404
+Tuned CatBoost,region,Location,0.06844376998775387,4.536973893452488
+Tuned CatBoost,property_type,Property type,0.04093401142043163,2.713417761792099
+Tuned CatBoost,quarter (cos),Season (quarter),0.023135493312618594,1.5335965448758275
+Tuned CatBoost,quarter (sin),Season (quarter),0.011956086229070524,0.7925403743666565

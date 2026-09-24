@@ -1,0 +1,30 @@
+{
+  "model_key": "mlp_tuned",
+  "model": "Tuned MLP",
+  "version": "Tuned",
+  "target_transform": "natural log: y = ln(price); inverse: price = exp(y)",
+  "selected_trial": 2,
+  "trial_source": "random search",
+  "validation": {
+    "n_rows": 247088,
+    "mae": 657428.2775771279,
+    "rmse": 8952532.666395007,
+    "r2": -0.005107112849431106,
+    "r2_ln_price": 0.494356653197771,
+    "median_abs_error": 178360.38630263644
+  },
+  "train": {
+    "n_rows": 945033,
+    "mae": 449940.86329341953,
+    "rmse": 8079903.582995354,
+    "r2": 0.22223295492428863
+  },
+  "training_seconds": 141.78075809997972,
+  "best_iteration": 18,
+  "iteration_detail": "18 epochs (best epoch, weights restored)",
+  "validation_predictions_clipped": 5,
+  "log_clip_bounds": [
+    8.517193191416238,
+    21.785133150065583
+  ]
+}
