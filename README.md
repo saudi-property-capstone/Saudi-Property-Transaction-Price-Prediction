@@ -302,6 +302,27 @@ python -m src.tuning.make_tuning_wip_report
 
 `notebooks/results_analysis.ipynb` displays the saved results of sections 6-8 without retraining.
 
+## 9. Dashboard (Streamlit)
+
+A multi-page dashboard presenting the whole project. Every page reads saved project outputs; nothing is trained or tuned when the app runs.
+
+| Page | Content |
+|---|---|
+| Home | Project summary, headline figures, transactions per year and by property type |
+| Dataset Overview | Size, date range, sample rows, feature roles, cleaning rules and data-quality checks |
+| Exploratory Analysis | Interactive Plotly charts (region / property type / year filters) built from cached aggregates |
+| Model Performance | Validation 2024 and Test 2025 metrics (MAE, RMSE, R² in SAR), actual vs predicted, error distribution, SHAP importance |
+| Price Prediction | Estimate a property price (dependent Region → City → District inputs) or check the model on a real 2025 sale, with SHAP factors |
+| Methodology | Pipeline, chronological split, baseline, models, stacking, selection and tech stack |
+
+- Code: `demo/app.py` (entry point and navigation) · `demo/views/` (pages) · `demo/dashboard/` (theme, formatting, cached data, charts, saved results) · `src/demo/predictor.py` (prediction and explanation)
+- Needs the processed dataset (section 1) for the Dataset, EDA and Prediction pages, and the trained model files (section 7) for the Prediction page. Home, Model Performance and Methodology read the small tracked tables in `outputs/`.
+
+```bash
+streamlit run demo/app.py
+python -m src.demo.predictor      # self-test: reproduces the final model's saved validation predictions
+```
+
 ## Repository Structure
 
 ```text
@@ -314,6 +335,12 @@ src/
   feature_engineering.py  prepare_features.py
   modeling/                   ML and DL Initial Modeling code
   tuning/                     hyperparameter tuning and stacking code
+  demo/                       prediction + explanation for the demo app
+
+demo/
+  app.py                      Streamlit dashboard entry point
+  views/                      dashboard pages
+  dashboard/                  shared theme, formatting, data, charts, results
 
 notebooks/
   baseline_model.ipynb
