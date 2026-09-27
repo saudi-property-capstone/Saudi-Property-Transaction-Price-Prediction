@@ -1,0 +1,11 @@
+# Visual theme for the Streamlit demo (demo/app.py): deep Saudi green, white, sand accents.
+[theme]
+base = "light"
+primaryColor = "#006C35"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F1E7"
+textColor = "#1B2A22"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
