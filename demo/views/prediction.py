@@ -6,7 +6,7 @@ import streamlit as st
 
 from dashboard import charts, data
 from dashboard import theme as th
-from dashboard.fmt import amount_html, compact, esc, sar, district_label
+from dashboard.fmt import amount_html, compact, esc, sar, district_label, district_labels
 from src.modeling import config as cfg
 
 
@@ -92,7 +92,8 @@ if mode != 'Check a real 2025 sale':
             regions = p.regions()
             region = st.selectbox('Region', regions, index=regions.index('Riyadh') if 'Riyadh' in regions else 0)
             city = st.selectbox('City', p.cities(region), help='Cities with training sales in the selected region.')
-            district = st.selectbox('District', p.districts(region, city), format_func=district_label,
+            districts = p.districts(region, city)
+            district = st.selectbox('District', districts, format_func=district_labels(districts).get,
                                     help='Districts with training sales in the selected city, most active first.')
             property_type = st.radio('Property type', th.PROPERTY_TYPES, horizontal=True)
             area = st.number_input('Area (m²)', min_value=10.0, max_value=5_000_000.0, value=500.0, step=50.0,
@@ -163,9 +164,10 @@ else:
         city = c2.selectbox('City', [ANY] + (p.sale_choices('city', region=f_region) if f_region else []),
                             disabled=f_region is None)
         f_city = None if city == ANY else city
-        district = c3.selectbox('District', [ANY] + (p.sale_choices('city_district', region=f_region, city=f_city)
-                                                     if f_city else []),
-                                format_func=lambda d: d if d == ANY else district_label(d), disabled=f_city is None)
+        sale_districts = p.sale_choices('city_district', region=f_region, city=f_city) if f_city else []
+        sale_labels = district_labels(sale_districts)
+        district = c3.selectbox('District', [ANY] + sale_districts,
+                                format_func=lambda d: sale_labels.get(d, d), disabled=f_city is None)
         f_district = None if district == ANY else district
         ptype = c4.selectbox('Property type', [ANY] + th.PROPERTY_TYPES)
         f_ptype = None if ptype == ANY else ptype
