@@ -1,5 +1,6 @@
 """Number formatting for user-facing values: full amounts with separators, or compact K/M/B."""
 import html
+from collections import Counter
 
 import numpy as np
 
@@ -45,6 +46,18 @@ def amount_html(v):
 def district_label(d):
     """'الرياض/النرجس' -> 'النرجس' (city prefix removed for display)."""
     return d.split('/', 1)[-1].strip() or d
+
+
+def district_labels(districts):
+    """Unique display label per district: 'الرياض/الخير' -> 'الخير (الرياض)' when another district is also 'الخير'.
+
+    st.selectbox maps the chosen label back to an option by label, so duplicate labels select the wrong district.
+    """
+    short = Counter(district_label(d) for d in districts)
+    labels = {d: district_label(d) if short[district_label(d)] == 1 else
+              f'{district_label(d)} ({d.split("/", 1)[0].strip()})' for d in districts}
+    seen = Counter(labels.values())
+    return {d: d if seen[lab] > 1 else lab for d, lab in labels.items()}
 
 
 def log_ticks(lo, hi, money=True):
