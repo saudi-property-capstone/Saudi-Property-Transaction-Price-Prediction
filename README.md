@@ -2,6 +2,12 @@
 
 This project will develop and evaluate predictive models using Saudi real-estate transaction data to estimate property transaction prices. It will also examine which property and transaction characteristics most influence estimated prices, with the goal of providing practical, data-driven support for real-estate pricing decisions.
 
+## Project Poster
+
+[![Project poster: Saudi property transaction price prediction](poster/saudi_property_poster.png)](poster/saudi_property_poster_A1.pdf)
+
+Full-resolution A1 poster (Arabic): [`poster/saudi_property_poster_A1.pdf`](poster/saudi_property_poster_A1.pdf)
+
 ## Modeling Approach
 
 Three initial regression models were trained and evaluated on the same chronological split of the processed dataset, and compared against a rule-based baseline:
@@ -345,6 +351,8 @@ demo/
 notebooks/
   baseline_model.ipynb
   results_analysis.ipynb
+
+poster/                       project poster (A1 PDF and PNG preview)
 
 outputs/
   figures/  tables/           EDA and feature-pipeline outputs
